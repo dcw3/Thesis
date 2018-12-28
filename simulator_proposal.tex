@@ -1,0 +1,54 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{bbm}
+\usepackage{amssymb}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator{\EX}{\mathbb{E}}
+\DeclareMathOperator{\RE}{\mathbb{RE}}
+\newcommand{\ita}{\textit}
+\newcommand{\eps}{\epsilon}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\p}{\mathbb{P}}
+
+\title{MDP Simulator Proposal}
+\author{dcw3}
+\date{December 2018}
+
+\begin{document}
+
+\maketitle
+
+\section{Summary of Previous Work}
+
+Overall, I did not find very similar previous work or similar papers. Below are the most relevant previous work I saw:
+
+\subsection{DeepMind Lab}
+
+DeepMind Lab is a 3D RL environment. The user can specify (or programmatically generate) levels, similar to how our simulator will allow users to specify the underlying MDP. The main difference is that DeepMind Lab focuses on a single kind of task (3D navigation), which is fairly complex.
+Further research on how level scripts are specified might be useful as inspiration for how we could allow users to programatically specify MDP's.
+
+\subsection{OpenAI Gym}
+
+OpenAI Gym offers a much wider set of tasks than DeepMind Lab, from simple text games to Atari games to robotics tasks. However, most tasks do not offer customization of the environment, and no task allows an arbitrary MDP.
+
+\subsection{Sundry MDP Simulators}
+
+I found two HTML MDP simulators online but they were not particularly useful for this project. One of them was only a Gridworld, and the other only allowed a constant reward for each state, not an arbitrary reward function.
+
+\subsection{TRFL}
+Tensorflow supposedly has good RL tools made by Deepmind, in a package called TRFL. I need to look into how to use it, I think.
+
+\subsection{Main Concerns Moving Forward}
+How to specify transition matrices and reward functions?
+
+How to write agents? Should I learn Tensorflow? It might be a bad idea to implement algorithms from scratch: supposedly is error-prone.
+
+How to specify priors for agent?
+
+\section{Pseudocode of MDP Simulator}
+
+The pseudocode I have in mind for the MDP simulator is in simulator\_pseudocode.py in this repository.
+
+\end{document}
