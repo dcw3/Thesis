@@ -1,0 +1,39 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{setspace}
+
+\title{Reinforcement Learning in Sushi Go}
+\author{Changyan Wang, advised by Prof. Yoram Singer}
+\date{October 2018}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\doublespacing
+\section{Motivation and Goal}
+
+A common test of machine intelligence is machine performance in games. When computers first defeated humans in Chess and Go, a lot of media attention was given, and these achievements were considered important milestones in machine intelligence.
+
+The goal of this project is to apply reinforcement learning (RL) techniques to a game, Sushi Go, which has not yet been explored in the literature using reinforcement learning. Following the completion of the bot, the project will be extended in a as-yet-undecided theoretical direction.
+
+\section{Problem Background and Related Work}
+
+In recent years, reinforcement learning has increasingly been the tool of choice for developing intelligent game-playing programs. For example, AlphaGo, the first program to defeat the best humans in Go, relied on reinforcement learning techniques. However, the games such as Go and Chess are two-player games with complete information (that is, both players can see the entire state of the game at any time). Furthermore, these games are deterministic. These attributes (2-player, complete information, determinism) tend to make a game less complex for a machine to learn, and researchers are interested in games which do not share these attributes (Robilliard et. al. 2014).
+
+Besides its novelty for RL, Sushi Go possesses several characteristics that make it interesting for machines to learn. Sushi Go is multiplayer, it has hidden information, and it has some random elements. On the other hand, Sushi Go also has some very simple characteristics: it has a relatively small number of possible games, and each game has a small number of turns. Additionally, scoring is relatively obvious, so positions are relatively easy for a machine to assess.
+
+\section{Approach and Plan}
+
+I will apply common RL techniques to Sushi Go. In particular, strategies that have succeeded in two-player, full-information games such as Go. I will begin by implementing forward-search algorithms such as Monte Carlo Tree Search in a two-player full-information variation of Sushi Go, and compare performance against human players. Based on the performance of the forward-search algorithms used, I will implement algorithms for the full version of Sushi Go, with multiple players and hidden information.
+
+\section{Evaluation}
+
+Evaluation of each algorithm implementation will be against human players, as well as against other implemented algorithms.
+
+\section{Bibliography}
+
+Robilliard, Denis, Cyril Fonlupt, and Fabien Teytaud. "Monte-carlo tree search for the game of “7 wonders”." Workshop on Computer Games. Springer, Cham, 2014.
+
+\end{document}

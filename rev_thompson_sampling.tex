@@ -1,0 +1,104 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{bbm}
+\usepackage{amssymb}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator{\EX}{\mathbb{E}}
+\DeclareMathOperator{\RE}{\mathbb{RE}}
+\newcommand{\ita}{\textit}
+\newcommand{\eps}{\epsilon}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\p}{\mathbb{P}}
+
+\title{Thompson Sampling Review}
+\author{dcw3}
+\date{November 2018}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+Thompson sampling is a popular machine-learning algorithm used by agents to balance exploration and exploitation in bandit problems. Generally, Thompson sampling selects an option in proportion to the probability that that option is the optimal option. Thus, it mostly explores early on, when little data has been gathered and the agent's confidence intervals are large. Naturally, as the agent narrows its estimate of the average reward of each action, the agent becomes more confident in the optimal action and exploits it more frequently.
+
+\section{The Bandit Problem}
+
+\subsection{Problem Setting}
+
+The bandit problem is a common machine learning setting, often described in terms of slot machines. In this problem, the ML agent is asked to repeatedly choose a machine to play, from a fixed number of slot machines. Each time a machine is chosen, a payout is received. The agent's goal is to maximize its total payout over many plays. Thus, it must balance exploring (playing many different machines in order to gain information about which one is optimal) and exploiting (playing the machine it thinks is optimal, in order to increase its total payout).
+
+Formally, the bandit problem is described in terms of actions, outcomes, and rewards. At each time step $t\in\{1, 2, \ldots\}$, the agent chooses an action $a_t$ out of a set of actions $\mathcal{A}$. Often (but certainly not always), we assume that the set of actions is finite. Then, the agent receives an outcome $y_t$ from some set of possible outcomes $\mathcal{Y}$, where $y_t$ is distributed according to some unknown distribution $\theta_{a_t}$. The agent applies a reward function $r$ to the outcome, so the agent receives a reward of $r(y_t)$ at time $t$.  If the number of actions is countable, we can imagine a vector of payout distributions $[\theta_{a_1}, \theta_{a_2},\ldots]$. We often refer to this vector of all payout distributions as $\theta$.
+
+For example, consider the slot machine formulation of the bandit problem. Each slot machine $i$ represents an action $a_i$. The payout received at time $t$ is the payout from the machine chosen. The reward is simply equal to the payout, so the reward function is the identity. The underlying payout distribution of $a_i$ (the action of pulling slot machine $i$) is $\theta_{a_i}$.
+
+The goal of bandit algorithms is to maximize the agent's expected reward, so the agent seeks to find the best arm to pull. That is, the agent wishes to find the optimal action, $a^*$. Formally, $$a^* = \argmax_{a\in\mathcal{A}} \EX[\theta_{a}]$$
+
+An equivalent goal is to minimize expected \textit{regret}. Regret is the cumulative difference between the agent's received reward and the reward that would have been received from always picking the optimal action. For a particular time $T$,
+$$REGRET(T) = \sum_{t=1}^T r(y^*_t) - r(y_t)$$
+where $y^*_t$ is the reward that would have been received from the optimal action at time $t$. Expected regret is
+$$\EX[REGRET(T)] = \sum_{t=1}^T \EX[r(y^*_t)] - \EX[r(y_t)]$$
+
+\subsection{Greedy and $\eps$-greedy Solutions}
+
+Since the agent wishes to maximize reward while learning which action is optimal, it must balance exploitation of the arm currently considered to be optimal with exploration of other arms. The simplest solution to the bandit problem is the greedy algorithm, which only exploits.
+
+Since the vector of payout distributions, $\theta$, is unknown, the algorithm begins with a (Bayesian) prior estimate of the probability distribution $p$ of $\theta$ values, and updates $p$ to a posterior distribution as new data is received. At each time point $t$, the greedy algorithm chooses the arm whose expected reward over $p$ is the greatest. That is, if $\theta' = \EX_p[\theta]$, then the greedy algorithm chooses
+$$a_t = \argmax_{a\in\mathcal{A}} \EX[\theta'_{a}]$$
+Then, the greedy algorithm receives its payout $y_t$, and adjusts the probability distribution of $\theta_{a_t}$ accordingly, then repeats.
+
+The greedy algorithm is weak. Because it fails to explore, it can easily be locked into a sub-optimal action. A simple and better alternative is $\eps$-greedy, which takes the greedy action with probability $1-\eps$ and takes a uniformly random action with probability $\eps$. Assuming a finite set of actions, as the number of trials goes to infinity, $\eps$-greedy explores each action infinitely many times, so it will eventually find the optimal action. However, because $\eps$-greedy explores infinitely, even after being confident of the optimal action it will continue to try sub-optimal actions, so its behavior will not ever be optimal.
+
+\section{Thompson Sampling}
+
+Thompson sampling (TS) is another solution to the bandit problem. Similar to greedy and $\eps$-greedy algorithms, Thompson sampling begins with a prior distribution over potential values of the payout distributions vector $\theta$, and updates this distribution using Bayesian updates when data is received. However, unlike the greedy algorithm, Thompson sampling chooses an action in proportion to the probability (over $p$) that that action is the optimal action. That is, $\p_p[a_t = a] = \p_p[a = a^*]$, where $p$ is the posterior probability distribution over the various possible values of $\theta$. When implementing TS, rather than explicitly finding the probability that each action is optimal, a particular value $\theta'$ is sampled from $p$. Then TS picks the action which is optimal under $\theta'$.
+
+TS is almost as simple to implement as the greedy algorithm, but it performs very well. Because it explores actions until they are no longer likely to be optimal, TS explores effectively without prematurely ruling out potentially optimal actions, unlike the greedy algorithm. However, unlike $\eps$-greedy, TS selectively explores only the actions which are likely to be optimal, rather than indiscriminately exploring among all actions. Thus, TS explores more efficiently, and this can be observed in many experimental contexts.
+
+\section{Approximating Thompson Sampling}
+
+\subsection{Gibbs Sampling}
+\subsection{Bootstrapping}
+
+\section{Information-Theoretic Bound}
+
+\subsection{Introduction}
+
+Russo and Van Roy showed that a lower bound on the performance of Thompson sampling can be derived from the relationship between expected regret and the \textit{information} gained by an action. To introduce their bound, we first introduce a few information-theoretic concepts:
+
+Let $X$ be a discrete random variable whose values fall within a finite set $\mathcal{X}$. The \textit{entropy} of $X$ is defined as:
+$$H(X) = -\sum_{x\in\mathcal{X}} \p[X=x]\log(\p[X=x])$$
+$H(X)$ is non-negative, and equals $0$ when $X$ is constant. In addition, $H(X)$ is maximized when $X$ is uniformly distributed over the set $\mathcal{X}$, and in this case $H(X) = \log(|\mathcal{X}|)$. Intuitively, the entropy of $X$ measures how concentrated is $X$.
+
+Let $Y$ be some random variable. The \textit{conditional entropy} of $X$ given $Y$, $H(X|Y)$, is the expectation over $Y$ of the entropy of $X|Y$. 
+$$H(X|Y) = \EX_Y\bigg[-\sum_{x\in\mathcal{X}} \p(X=x|Y)\log\p(X=x|Y)\bigg]$$
+Intuitively the conditional entropy of $X$ measures how concentrated is $X$ once given a value of $Y$.
+
+The \textit{Kullback-Leibler divergence} measures the difference between two probability distributions. $D(P||Q)$ is the K-L divergence between $P$ and $Q$, and is defined as:
+$$D(P||Q) = \int \log\bigg(\frac{dP}{dQ}\bigg)dP$$
+where $\frac{dP}{dQ}$ is the Radon-Nikodym derivative. $D(P||Q)$ is the expected value of the log-likelihood ratio between $P$ and $Q$. $D(P||Q) = 0$ if and only if $P=Q$ almost surely, and is otherwise positive.
+
+The \textit{mutual information} between $X$ and $Y$ is the K-L divergence between the joint distribution of $X$ and $Y$ and the product of their separate marginal distributions:
+$$I(X;Y) = D(P(X, Y)||P(X)P(Y))$$
+$I(X;Y)$ can equivalently be expressed as $I(X;Y) = H(X) - H(X|Y)$, so $I(X;Y)$ represents the amount of information $Y$ provides about $X$. Since it can be expressed as a K-L divergence, $I(X;Y)\geq 0$, so the entropy of $X|Y$ is never greater than the entropy of $X$.
+
+Using these existing definitions, Russo and Van Roy defined the \textit{information ratio}. In the bandit problem, the information ratio of a time step $t$, $\Gamma_t$, is the ratio between the square of the expected regret and the information gained about the optimal action.
+$$\Gamma_t = \frac{\EX[r^*_t - r_t]^2}{I(a^*; (a_t, y_t))}$$
+where the expectation in the numerator is evaluated at time $t$ under the posterior distribution of $a_t$ (i.e. the likelihood distribution of $a_t$ based on our algorithm) after the algorithm has seen $a_1, y_1, \ldots, a_{t-1}, y_{t-1}$. The denominator is the reduction in entropy of the distribution of $a^*$ after seeing $a_t, y_t$.
+
+\subsection{General Information-Theoretic Bound}
+
+Let $REGRET_{TS}(T)$ be the cumulative regret of a Thompson sampling algorithm at time $T$. Russo and Van Roy showed that, if $\Gamma_t\leq \overline{\Gamma}$ for all time points $t\leq T$, then:
+$$\EX[REGRET_{TS}(T)] \leq \sqrt{\overline{\Gamma}H(a^*)T}$$
+where $H(a^*)$ is the entropy of the prior distribution of $a^*$. This bound is quite general, and yields different results in different settings, as the value of $\overline{\Gamma}$ changes.
+
+\subsection{Example: Linear Bandit}
+
+A common example of a bandit problem is the linear bandit, where each action $a_i$ is a $d$-dimensional vector of real numbers. There is an unknown parameter vector $\theta$, and the reward received at time $t$ when selecting action $a_t$ is equal to the inner product $\theta\cdot a_t + w_t$, where $w_t$ is Gaussian noise.
+
+Russo and Van Roy showed that in this case, the information ratio is upper-bounded by $d/2$ almost surely, so plugging in $\overline{\Gamma} = d/2$ into their general bound yields
+$$\EX[Regret_{TS}(T)]\leq \sqrt{H(a^*)dT/2}$$
+as a general bound on the performance on Thompson sampling in this environment. This is an example of plugging in bounds on the information ratio in order to bound the performance of TS.
+
+\end{document}

@@ -1,0 +1,335 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{bbm}
+\usepackage{amssymb}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator{\EX}{\mathbb{E}}
+\DeclareMathOperator{\RE}{\mathbb{RE}}
+\newcommand{\ita}{\textit}
+\newcommand{\eps}{\epsilon}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\p}{\mathbb{P}}
+
+\title{RL Methods Review}
+\author{dcw3}
+\date{October 2018}
+
+\begin{document}
+
+\maketitle
+
+\section{The RL Problem}
+
+\subsection{Reward}
+
+Reinforcement learning (RL) is a broad category of machine learning, in which the learning agent aims to navigate an environment to maximize some defined reward. In RL problems, the RL agent makes observations of its environment, takes an action, receives a reward, and then repeats this cycle. The goal is to maximize the total cumulative received reward. The agent can continuously adapt its strategy based on the feedback it is receiving from the environment. For example, if a reinforcement learning agent is playing an arcade game, the reward at a given time point might be the number of points gained/lost in that time point. Or, if a RL agent is in charge of teaching a robot to move, it might get positive reward for moving forward, and get negative reward for crashing.
+
+\subsection{History and State}
+
+RL agents are aiming to maximize their cumulative reward. But, how do they do this? At any point, the RL agent is trying to use the information it has (the history) to decide which action to take next. The “history” is defined as the entire collection of past observations, actions, and rewards. Of course, a RL algorithm rarely utilizes every single piece of the history to make its decision. Instead, from the history, the RL agent only remembers/stores the relevant information it needs to make its future decisions. Unnecessary or outdated information in the history is tossed out. The remaining information, as well as any calculations derived from this information, is what the RL agent keeps track of, and what it uses to decide its actions. This information is called the state of the RL agent, because it is a complete representation of the agent’s current decision-making information. (In other words, the agent’s state is derived from the history, but once the state is known, the history can be thrown away.) The agent’s state is Markov, because given the agent’s state, it is not necessary to know the history.
+
+\subsection{Markov Reward Processes, Discounts, and Return}
+
+I assume the reader is familiar with a Markov chain, in which Markov states are traversed, with the probability of transitioning from one state to another expressed using a constant state transition matrix. A Markov reward process (MRP) is a variation on a Markov chain that assigns rewards. At each time step, we receive a reward based on which state we are in. These rewards could be random, but in general we care about the expected value of the reward we receive. Thus, we define a reward function $R$ such that $R(s) = \EX[R_t | S_t = s]$, where $R_t$ is the reward received at time $t$ and $S_t$ is the state at time $t$, so $R(s)$ is the expected reward at a time, given that the current state is $s$.
+
+Note: We usually discount rewards by a scalar factor $0 \leq \gamma \leq 1$. If we are currently at time $t$, and time $t+k$ will yield reward $R_{t+k}$, we devalue this by a factor of $\gamma^k$. Instead of valuing $R_{t+k}$ at face value, we value it at $\gamma^kR_{t+k}$. There are many reasons for this, including to account for uncertainty that isn’t in the model, and to prevent computing infinite rewards if we have a cyclic Markov process.
+
+Of course, in RL problems we aren’t just interested in the reward at a single time step. To evaluate how “good” a state is, we are interested in its return, its total expected discounted reward. The return at a time-point $t$ is $G_t$.
+$$G_t = R_t + \gamma R_{t+1} + \ldots = \sum_{k=0}^\infty \gamma^kR_{t+k}$$
+
+We are usually interested in the expected return based on a given starting state. We call this the state’s value, $v(s) = \EX[G_t | S_t = s]$. Since this is a Markov process, we can conveniently simplify this equation in terms of the values of other states:
+$$v(s) = \EX[G_t | S_t = s] = \EX[R_t + \gamma v(S_{t+1}) | S_t = s]$$
+If $\mathcal{S}$ is our set of possible states, $P$ is our state transition matrix, so $P_{s_1s_2}$ is the probability of moving from $s_1$ to $s_2$, then we can write this more explicitly as:
+$$v(s) = \EX[G_t | S_t = s] = R(s) + \gamma\sum_{s'\in \mathcal{S}}v(s')$$
+$$v = R + \gamma Pv$$
+This equation is called the Bellman equation, and can be solved in computational time $O(n^3)$, where $n$ is the number of states. This is possible for small MRP’s but large ones require other methods (discussed later) to approximate states’ values. In many RL algorithms (particularly, those that are not model-free), a large part of an RL agent’s goal is to explore the state space of the problem it is trying to solve, and approximately learn the values of the states. This knowledge of the states’ values allows the RL agent to act more appropriately.
+
+\subsection{Markov Decision Process, Actions, and Policy}
+
+The overall RL problem is often represented as a Markov decision process (MDP), which is a MRP plus actions. Just like in a MRP, the state transition matrix in a MDP represents the probabilities of moving from state $A$ to state $B$ for every pair of states $A$ and $B$. However, unlike in a simple Markov chain where the state transition matrix is constant, in a MDP the state transition matrix depends on the agent’s actions, which is the agent’s behavior function. Thus, depending on which action it chooses, the agent in a Markov decision process is able to influence which states it is likely sent to next. Specifically, each action has a corresponding state transition matrix. Notationally, we denote the set of actions as $\mathcal{A}$. For each $a \in \mathcal{A}$, we have a corresponding state transitional matrix $P^a$, where $P_{s_1s_2}^a$ is the probability, under action $a$, of transitioning from $s_1$ to $s_2$.
+
+A policy represents how an agent chooses an action. It completely describes an agent’s decisions. A deterministic policy specifies which one action $a_s$ for each state $s$, so the agent will always take action $a_s$ when in state $s$. In other words, a deterministic policy is a function $\pi$ that maps $s$ to $a_s$. A stochastic policy specifies, for each state, a probability distribution over all possible actions. That is, a stochastic policy is a function $\pi$ which maps an action $a$ and a state $s$ to the probability that $a$ will be chosen when in state $s$.
+
+\subsection{State-value and Action-value Functions}
+
+Naturally, we are interested in how much value we will receive from various policies. In RL, the amount of expected value gained from following a particular policy is coded in value functions. The state-value function $v_\pi(s)$ is the expected return starting from a state $s$, following policy $\pi$. It is defined as
+$$v_\pi(s) = \EX_\pi[G_t | S_t = s]$$
+The action-value function $q_\pi(s, a)$ is more specific: it is the expected return starting from a state $s$, taking action $a$, and then following policy $\pi$. It is defined as
+$$q_\pi(s, a) = \EX_\pi[G_t | S_t = s, A_t = a]$$
+Similar to the Bellman equation for MRP’s, we can use the Bellman equation to break value functions into the immediate reward plus the value functions of other states/actions, as follows:
+$$v_\pi(s) = \EX_\pi[G_t | S_t = s] = \EX[R_t + \gamma v_\pi(S_{t+1}) | S_t = s]$$
+$$q_\pi(s, a) = \EX_\pi[G_t | S_t = s, A_t = a] = \EX[R_t + \gamma q_\pi(S_{t+1}, A_{t+1}) | S_t = s, A_t = a]$$
+Based on the policy $\pi$, we can express $v_\pi(s)$ in terms of the action-value functions of its state:
+$$v_\pi(s) = \sum_{a\in\mathcal{A}} \pi(a|s)q_\pi(a, s)$$
+Furthermore, based on the state transition matrix for a given action, we can break down the action-value function in terms of the state-value function!
+$$q_\pi(s, a) = \mathcal{R}^a_s + \gamma\sum_{s'\in\mathcal{S}}P^a_{ss'}v_\pi(s')$$
+Combining these two equations, we can get an equation for the state-value function without involving the action-value function, and similarly we can get an equation for the action-value function without involving the state-value function…
+$$v_\pi(s) = \sum_{a\in\mathcal{A}} \pi(a|s)\bigg(\mathcal{R}^a_s + \gamma\sum_{s'\in\mathcal{S}}P^a_{ss'}v_\pi(s')\bigg)$$
+$$q_\pi(s, a) =  \mathcal{R}^a_s + \gamma\sum_{s'\in\mathcal{S}}P^a_{ss'}\bigg(\sum_{a\in\mathcal{A}} \pi(a|s')q_\pi(a, s')\bigg)$$
+Similar to the calculation of value in an MRP, we can express the calculation of all $v_\pi$ (that is, $v_\pi(s) for all $s$), in matrix form:
+$$v_\pi = \mathcal{R}^\pi + \gamma P^\pi v_\pi$$
+$$v_\pi = (I - \gamma P^\pi)^{-1}\mathcal{R}^\pi$$
+
+\subsection{Finding the Optimal Value Functions}
+
+In RL, we're interested in searching for the optimal policy. This usually involves estimating the optimal state-value function and the optimal action-value functions, which are defined as the highest value of the value functions over all policies:
+
+$$v_*(s) = \max_\pi v_\pi(s)$$
+$$q_*(s, a) = \max_\pi q_\pi(s, a)$$
+
+An MDP for which we know the optimal value functions is called "solved". Note that at a given state, the optimal action is always to pick the action which has the highest action-value. Thus, the optimal policy directly corresponds to the set of optimal action-value functions $q_*(s, a)$ for all states $s$ and actions $a$ in the MDP.
+
+We might expect that, similar to how we used the Bellman equations to solve for $v_\pi$ and $q_\pi$, we could solve for $q_*$. Unfortunately, the Bellman equations for $q_*$ simplify to
+$$q_\pi(s, a) =  \mathcal{R}^a_s + \gamma\sum_{s'\in\mathcal{S}}P^a_{ss'}\max_{a'}q_*(s', a')$$
+which is non-linear and has no simple solution. Thus, in RL, we will use iterative methods to estimate $q_*$.
+
+\subsection{Learning and Planning}
+
+Reinforcement learning can often be broken into two problems: learning and planning. Initially, the RL agent has to learn about its environment and learn the behavior of the MDP it finds itself in. As it gains more information, planning becomes more important: the agent must use this information to predict how a policy will perform (prediction) and to choose optimal behavior (control).
+
+\section{Dynamic Programming}
+
+Dynamic programming is used for planning. It can do both prediction (prediction of the performance of a given policy) and control (using present information to choose the optimal policy).
+
+\subsection{Prediction}
+
+We know that $v_\pi = \mathcal{R}^\pi + \gamma P^\pi v_\pi$ for the "true" state-value function $v_pi$, but solving this requires finding a matrix inverse, which is computationally infeasible for large state spaces. Thus, in dynamic programming, to evaluate a policy, we iterate using an approach similar to the Bellman equation. We begin with some estimate $v_0$ of the state-value function, and let $v_{t+1} =  \mathcal{R}^\pi + \gamma P^\pi v_t$. Iterating this way causes $v_t$ to approach $v_\pi$. This process is called \ita{synchronous backups}.
+
+\subsection{Control}
+
+Using iteration as above, we obtain an estimate of $v_\pi$ for the previous policy $\pi$. Now we iterate on the policy to improve it. Call the previous policy $\pi_t$, so we've estimated $v_{\pi_t}$. Call our improved policy $\pi_{t+1}$. To improve the policy, we define our next policy as greedy on $v_{\pi_t}$. That is, the policy always chooses the action $a$ which maximizes $q(s, a)$ where $s$ is the current state and $q$ is derived from our estimate of $v_{\pi_t}$.
+
+\subsection{Policy Iteration}
+
+Now that we have a way to predict how good a policy is, then use that prediction to make a new improved policy, we naturally arrive at a method of iteratively improving the policy. In \ita{policy iteration}, we estimate $v_{\pi_t}$, then find $\pi_{t+1}$ based on $v_{\pi_t}$, then estimate $v_{\pi_{t+1}}$, etc. This can be done using any method (not just dynamic programming) of estimating $v_{\pi_t}$ and any policy improvement algorithm for finding $\pi_{t+1}$ based on $v_{\pi_t}$.
+
+\subsection{Value Iteration}
+
+Policy iteration using dynamic programming is one way to do planning. Another is called \ita{value iteration}. Whereas policy iteration was based on the Bellman equation, value iteration is based on the previously observed dependency between state-value functions:
+$$v_\pi(s) = \sum_{a\in\mathcal{A}} \pi(a|s)\bigg(\mathcal{R}^a_s + \gamma\sum_{s'\in\mathcal{S}}P^a_{ss'}v_\pi(s')\bigg)$$
+For the optimal value function $v_*$, we can simplify this further:
+$$v_*(s) = \max_{a\in\mathcal{A})} \mathcal{R}^a_s + \gamma P^a_s v_*$$
+Based on this intuition, we define our iterative value update as:
+$$v_{k+1}(s) = \max_{a\in\mathcal{A})} \mathcal{R}^a_s + \gamma P^a_s v_k$$
+Using value iteration, we can estimate $v_*$ without assuming any policy. This can be more effective than policy iteration in complex MDPs.
+
+\subsection{Efficiency and Asynchronous Dynamic Drogramming}
+
+Unfortunately, dynamic programming is not efficient in large MDPs, since each step of iteration requires estimating the state-value function for every single state in the MDP. However, DP's fundamental idea of using previous value functions to infer other value functions is used by many other, more efficient, algorithms. For example, in asynchronous dynamic programming, only some states are updated at each iteration step. Some asynchronous DP algorithms decide which states to back up based on the size of the Bellman update, or based on which states an agent has visited most often.
+
+\section{Model-Free Methods}
+
+Dynamic programming requires us to know the whole MDP (both the expected reward $\mathcal{R}^\pi$ and the state transition matrix $\gamma P^\pi v_t$) in order to predict the performance of a policy in that MDP. In most cases, this is not realistic. This is where model-free methods, such as Monte-Carlo and TD methods, can be useful for estimating the values of states in the MDP. By sampling the MDP many times, model-free methods can learn the values of states in an MDP without prior knowledge about what that MDP looks like. Even when the MDP is known, model-free methods can still be useful in large MDP's, because, unlike DP, they sample the MDP rather than calculating through the whole MDP.
+
+\subsection{Monte-Carlo Policy Evaluation}
+
+Whereas dynamic programming uses the MDP and its knowledge of state transitions to estimate value functions, Monte-Carlo (MC) methods do not assume any knowledge about the MDP underlying the process. Rather, MC bases its estimates of value functions purely on the empirical return. That is, Monte-Carlo methods note every time that a state is visited, and record the subsequent return $G_t = R_t + \gamma R_{t+1} + \ldots$ in a cumulative sum. We then divide the total return received after this state by the number of times we've visited it to find the empirical average return, which is our estimated state-value function for this policy. Essentially, to estimate the state-value functions of a policy, MDP uses the policy many times and averages how well the policy performs at each state. 
+
+Two notes: First, in non-stationary problems, it can be useful to keep a \ita{running mean} which gives more weight to more recent results.) Second, note that for continual games which never terminate, Monte-Carlo requires modification to be applicable, since without termination, $G_t$ is never "done" being calculated.
+
+\subsection{TD Policy Evaluation}
+
+In Monte-Carlo prediction, we estimate state-value functions purely based on return, without regard to the subsequent states entered in the process. In TD-learning, we use our estimated state-value functions to help update other state-value functions. The simplest example is TD(0), which updates $V(S_t)$ as follows:
+$$V(S_t) \rightarrow (1-\alpha)V(S_t) + \alpha \bigg(R_{t+1} + \gamma V(S_{t+1})\bigg)$$
+so the adjustment we make to $V(S_t)$ moves towards our estimate of the value of its successor state, rather than simply the empirical return. In this example, $R_{t+1} + \gamma V(S_{t+1})$ is the \ita{TD target} while $\bigg(R_{t+1} + \gamma V(S_{t+1})\bigg) - V(S_t)$ is the \ita{TD error}.
+
+\subsection{MC vs. TD}
+
+In general, MC is guaranteed to converge to the answer, and is simple to use. Unlike TD, doesn't assume anything about the underlying Markov process, so it is robust in situations where the situation isn't perfectly Markov. However, MC converges more slowly because it relies on brute force for each state, rather than partially sharing information between states as TD does. In addition, MC is more sensitive to random variances in the sample.
+
+\subsection{n-step TD Returns and TD($\lambda$) Learning}
+
+MC uses purely the empirical returns, so $G_t = R_t + \gamma R_{t+1} + \ldots$. TD(0) uses the next empirical return, and uses the value of the next state as a substitute for all future returns, so $G_t = R_t + \gamma v(S_{t+1})$. A natural idea is to do something in between, such as using the next $n$ empirical returns and then substituting in the value of the next state. Call this return $G^{(n)}_t$. For example, if $n = 2$, we could let $$G^{(2)}_t = R_t + \gamma R_{t+1} + \gamma^2 v(S_{t+2})$$. $G^{(n)}_t$ is called the \ita{n-step TD return}. In TD(0) we used the 1-step TD return $G^{(1)}_t$ as the TD target, but we could substitute another n-step TD return and get a similar algorithm. The $\infty$-step TD return is equivalent to the empirical return.
+
+The $\lambda$-return is used to blend all the n-step returns together in TD learning. We define the $\lambda$-return as
+$$G^\lambda_t = \sum_{i=1}^\infty (1-\lambda)\lambda^{i-1}G^{(i)}_t$$
+In TD($\lambda$), we define the TD target as $G^\lambda_t$. Note that for $\lambda = 0$, if we let $0^0 = 1$, $G^\lambda_t = G^{(1)}_t$ as expected. In general, larger values of $\lambda$ make the algorithm increasingly similar to MC and less similar to TD(0).
+
+\subsection{Backwards-View TD}
+
+The TD learning described above is called \ita{forward-view TD learning} because it updates state-value estimates based on future rewards. If forward-view TD($\lambda$) were programmed literally, it would not update any state-value estimate until the end of the episode. A variation, called \ita{backward-view TD learning}, has the advantage that, unlike MC or forward-view TD, it updates state-value estimates online (on-the-fly) so it does not need complete episodes in order to learn. Each time a reward is received, backward-view TD updates all previous states. Backward-view TD calculates how much a state $s$ would have updated its state-value function, using a value called the \ita{eligibility trace} $E_t(s)$, which decays by a factor of $\gamma\lambda$ at each time step but increases by $1$ if the current state is $s$:
+$$E_t(s) = \gamma\lambda E_{t-1}(s)$$
+When a reward $R_t$ is received, we set our TD target as $R_t + \gamma V(S_{t+1}) - V(s)$, similar to TD(0). Then, we update \ita{every} state by $\alpha E_t(s)\bigg(R_t + \gamma V(S_{t+1}) - V(s)\bigg)$, so we multiply the TD target by the eligibility trace and then update the state.
+
+Backward-view TD is roughly equivalent to forward-view TD. In fact, if all updates were only applied at the end, backward-view TD would be exactly equivalent to forward-view TD. The difference is that backward-view TD applies the update at each time step, so its final values are slightly different.
+
+\section{Model-Free On-Policy Control}
+
+Similar to how DP prediction was used to iteratively improve policy (by acting greedily with respect to the previous round of estimated state-value functions), we can use our model-free predictions to iteratively improve policy. Note that we can't copy the method exactly, because state-value functions alone cannot provide guidance in a model-free environment, because we don't have full information about how our actions influence which states we go to. Instead, we must use action-value estimates $Q(s, a)$ which are calculated similarly to $V(s)$ using MC or TD.
+
+Whereas DP control was simple (just act greedily), a purely greedy strategy is a bad choice for model-free control. A DP policy can act greedily with confidence because it knows the entire MDP. In model-free control, the policy must earn plenty of reward \ita{and} explore in order to identify possibly better strategies. Accordingly, acting greedily could prevent proper exploration and lock the agent in a sub-optimal strategy.
+
+\subsection{$\eps$-Greedy and GLIE Policies}
+
+$\eps$-greedy policy is simply one that chooses the greedy action with probability $1-\eps$ and a random action with probability $\eps$. We can viably perform policy iteration using MC estimates of action-value functions and iterating with $\eps$-greedy policies.
+
+$\eps$-greedy can be a special case of the general class of GLIE (Greedy in the Limit with Infinite Exploration) policies. A policy is GLIE if it explores each state-action pair and infinite number of times, and the policy converges towards the greedy policy. For example, $\eps$-greedy policy where $\eps = 1/t$ is GLIE. GLIE policies are guaranteed to converge to the greedy policy on the optimal action-value function.
+
+\subsection{SARSA}
+
+Now that we know how to apply MC to iterate on $\eps$-greedy policies, we naturally wonder how TD can be used to do the same. Applying TD to action-value functions is quite simple. The action-value analog to TD(0) is called SARSA(0), and updates in SARSA(0) are calculated in the following manner:
+$$Q(S_t, A_t) \rightarrow Q(S_t, A_t) + \alpha(R_t + \gamma Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t))$$
+Similar to n-step TD, n-step SARSA defines the n-step Q return as
+$$q^{(n)}_t = R_t + \gamma R_{t+1} + \ldots + \gamma^{n-1}R_{t+n-1} + \gamma^nQ(S_{t+n}, A_{t+n})$$
+and the update rule is
+$$Q(S_t, A_t) \rightarrow Q(S_t, A_t) + \alpha(q^{(n)}_t - Q(S_t, A_t))$$
+Similar to in TD($\lambda$), we define the $\lambda$-return as
+$$q^\lambda_t = (1-\lambda)\sum_{n=1}^\infty\bigg(\lambda^{n-1}q^{(n)}_t\bigg)$$
+And SARSA($\lambda$) updates $Q(S_t, A_t)$ towards $q^\lambda_t$. Finally, backwards-view SARSA is similar to backwards-view TD, except the eligibility traces are stored for each state-action pair rather than each state. As with all other algorithms described above, the initial values of $Q(S, A)$ can be arbitrary. 
+
+For policy iteration with SARSA to converge to the greedy (optimal) policy on the optimal action-value function, the policies not only must be GLIE, but its values $\alpha$ must also satisfy that the sum of $\alpha_t$ does not converge, but the sum of $\alpha^2_t$ does converge.
+
+\section{Model-Free Off-Policy Control}
+
+The methods described so far (MC control, SARSA control) rely on policy iteration, where we must apply and test a policy before improving it. However, often it is useful to estimate how good a policy is without actually applying that policy. For example, it would be useful to estimate how well an optimal (e.g. greedy) policy would perform, even while we are currently executing an exploratory (e.g. $\eps$-greedy) policy. We call the actual policy we're following the \ita{behavior policy} $\mu$, and the policy we're trying to evaluate the \ita{target policy} $\pi$. Our first attempt at off-policy control aims to learn state-value functions, is based on simple probability comparisons, and is called \ita{importance sampling}.
+
+\subsection{Importance Sampling}
+Suppose that at time $t$ the agent is at state $S_t$, and the probability that $\mu$ picks action $A_t$ is $\mu(S_t, A_t) = 1/2$, and similarly $\pi$ picks action $A_t$ with probability $\pi(S_t, A_t) = 1$. Then in MC importance sampling we update $V(S_t)$ as follows:
+$$V(S_t) \rightarrow V(S_t) + \alpha\bigg(\frac{\pi(S_t, A_t)}{\mu(S_t, A_t)}\ldots\frac{\pi(S_{t+n}, A_{t+n})}{\pi(S_{t+n}, A_{t+n})}\bigg)G_t$$
+So the state-value update is scaled based on how frequent the taken action was in the behavior and target policies. Similarly in TD(0) importance sampling we update $V(S_t)$ as:
+$$V(S_t) \rightarrow V(S_t) + \alpha\bigg(\frac{\pi(S_t, A_t)}{\mu(S_t, A_t)} \big(R_t + \gamma V(S_{t+1})\big)- V(S_t)\bigg)$$
+TD(0) importance sampling has much lower variance than MC importance sampling, because it only compares the frequency of the behavior and target policies at one stage, rather than at all stages like MC does.
+
+\subsection{Q-Learning}
+
+Off-policy Q-learning aims to learn action-value functions while off-policy. In particular, if $A_{t+1}$ is chosen according to $\mu(S_{t+1})$ (that is, $A_{t+1}$ is the actual action chosen at time $t+1$) then let $A'$ by the hypothetical action chosen by $\pi(S_{t+1})$. Then, at each time step our update rule is:
+$$Q(S_t, A_t) \rightarrow Q(S_t, A_t) + \alpha\bigg(R_t + \gamma Q(S_{t+1}, A') - Q(S_t, A_t)\bigg)$$
+so we update the action-value towards $R_t + \gamma Q(S_{t+1}, A')$. Note that for a good result, you should pick a behavior policy that actually explores most or all state-action pairs many times, otherwise many Q-values will not be accurate due to low sample size. A simple example is when $\pi$ is greedy. Then $\gamma Q(S_{t+1}, A') = \max_{a'} \gamma Q(S_{t+1}, a')$. Q-learning converges to the correct estimation of the action-value function.
+
+\section{Value Function Approximation}
+
+The model-free methods for prediction and control usually store a value function for every state, or every state-action pair. This becomes impossible for very large Markov processes, such as most board or video games. For MDP's too large to record (or properly estimate) every value function, we instead create a \ita{value function approximator} $\hat{v}(s, w)\approx v(s)$ or $\hat{q}(s, a, w) \approx q(s, a)$. $w$ is the parameter that determines how the value function approximator estimates the value of a state or state-action pair. Often, $w$ is the weights in a linear combination of features or a neural network.
+
+Note that so far we have been vague about what a value function approximator inputs and outputs, exactly. This is because a value function approximator has several options. It can intake a state $s$ and output a value estimate for it $\hat{v}(s, w)$, intake a state $s$ and action $a$ and output $\hat{q}(s, a, w)$, or input a state $s$ and output a predicted state-action value for every action $a$: $\big\{\hat{q}(s, a, w)\big\}\forall a\in\mathcal{A}$. Broadly speaking, our aim is to use value function approximators as a substitute for learning every single state-value function. Then, just as we used our learned state-value functions to create an improved policy which we then aim to learn the value functions for, we will use our learned value function approximators to create an improved policy, for which we then aim to learn a new value function approximator, and so on. So, how to train our value function approximators?
+
+\subsection{Incremental (Online) Methods}
+
+We would like to train our value function approximator to be close to the true value function. If we knew the true value function, we could do this with methods such as SGD (if our approximator is a linear combination of features) or backprop (if using a neural network). In practice, we can replace the true value function in these algorithms with our estimated value function from MC or TD. Thus, at each iteration we would train the value function using $G_t$ (MC), $R_t + \gamma\hat{v}(S_{t+1}, w)$ (TD(0)), or $G^\lambda_t$ (TD($\lambda$)) as our target, measuring our error as $target - \hat{v}(S_t)$.
+
+Thus, using MC and forward view TD to train a value function approximator are theoretically quite simple, as one simply plugs in the MC or TD target into the training algorithm of the value function approximator. Backwards view TD can be more difficult, because the calculation of eligibility traces depends on the particular training algorithm of the value function approximator.
+
+However, for linear combinations of features in SGD, backwards view TD is simple. The eligibility traces are stored as a vector, with length equal to the number of features. The eligibility trace decays by $\gamma\lambda$ each time step and increments by the value of the features themselves at each time step. Then, at each time step the update applied is equal to alpha times the target times the eligibility trace:
+$$E_t = \gamma\lambda E_{t-1} + \mathbb{x}(S_t)$$
+$$\delta w = \alpha\delta_t E_t$$
+where $\delta_t$ is the target.
+
+The above methods are for state-value estimation. Action-value estimation is nearly identical. Because we are estimating the value of a particular state and action, the feature vector contains features of both the state and the action. Thus, we call the feature vector $\mathbb{v}(S, A)$ instead of $\mathbb{v}(S)$.
+
+Using these methods to train our value function approximator, we can then use it in our previous policy iteration algorithms such as $\eps$-greedy policy improvement.
+
+\subsection{Convergence of Value Function Approximation}
+
+One problem with value function approximation is that it is often not guaranteed to converge to the optimal approximator. In particular, on-policy TD-trained value approximation is not guaranteed to converge for non-linear value approximators, and even linear value approximators are not guaranteed to converge when TD training is used off-policy. However, a small adjustment to TD learning (called Gradient TD) does yield convergence to the optimal approximator, including for non-linear approximators.
+
+Control algorithms are trickier. MC, SARSA, and Q-learning are not guaranteed to converge to the optimal approximation for non-linear approximation functions, but are guaranteed to chatter near the optimum for linear approximators. Q-learning using Gradient TD, though, is guaranteed to converge for linear approximators.
+
+\subsection{Batch Methods}
+
+The above methods are for online (incremental) learning. Alternatively, we can run a policy many times to obtain training data, and then fit the value function approximator to our training data. This is called \ita{batch learning}. For example, for estimating state-value functions, we would obtain a series of pairs $<S_t, G_t>$ from running our policy, and we would randomly sample pairs from our experience with which to train our approximator (e.g. using SGD). In general, training using previous experiences is called \ita{experience replay}. Batch learning is better able to take advantage of limited experiential data, because it can replay an experience multiple times. In addition, by randomly sampling past experiences rather than applying an update immediately after the experience, the input data is less self-correlated (is now i.i.d.), which can improve the stability of learning.
+
+A successful example of this is Deepmind's training an agent to play Atari games. There, they used experience replay on action-value functions, where the agent used $\eps$-greedy policy iteration on Q values. The function approximator used was a neural network. The experiences recorded were tuples $<s_t, a_t, r_t, s_{t+1}>$ and these tuples were randomly sampled in order to define Q learning targets based on the previous neural network. Then, the next neural network was defined as the neural network which minimized the MSE between its Q values and the Q learning targets. That is,
+$$\mathcal{L}(w_i) = \EX\bigg[\big(r+\gamma\max_{a'}Q(s', a'; w^-_i) - Q(s', a'; w_i)\big)\bigg]$$
+where $w^-$ is the weights in the previous network.
+
+One final note: in the case of linear value function approximators, we can directly solve for the least squares solution (rather than using SGD). This can be faster when the number of features is small. However, this does not mean experience replay is useless for linear approximators: it can be faster in cases where the number of features is large.
+
+\section{Policy Gradient}
+
+So far we have approximated the value of states or state-action pairs directly using a set of parameters. However, in some cases it is better to parametrize the policy itself. This can be useful if the preferred policy is not greedy, but is instead random. For example, in rock paper scissors, a greedy policy would pick a deterministic option, which could certainly be exploited by opponents.
+
+There are two steps to optimizing a policy. We first choose an objective function, and then move the policy towards the maximum of that objective function.
+
+\subsection{Policy Objective Functions}
+
+When the start state is well defined (such as in many games), we define the objective function as the expected reward based on following this policy. If $s_1$ is the starting state, $\theta$ is the parameter of the policy, and $J_1(\theta)$ is the objective function on these parameters, this is:
+$$J_1(\theta) = V^{\pi_\theta}(s_1)$$
+This objective function $J_1$ is the \ita{start value} of the policy. In continuous environments, we can use the \ita{average value} or the \ita{average reward per time step}. If the MDP is stationary, these can be expressed in terms of the stationary distribution of the MDP.
+
+\subsection{Optimizing Policy Objectives}
+
+Given a policy and an objective function, how do we improve the policy with respect to the objective function? In general we wish to change the policy in a direction that increases the objective. For state-value functions it was easy to tell which direction to move the policy in, because given a set of state-values, it was easy to infer how a policy change would affect total return. However, in policy parametrization/optimization problems it is not immediately clear how changing the policy will affect the objective function. Thus, a key component of solving policy parametrization/optimization is to estimate in which direction we should shift the policy to improve it.
+
+\subsection{Optimizing Policy Objectives: Finite Differences}
+
+The simplest method to do this is called \ita{finite differences}. Suppose the parameters are a vector $\theta\in\R^n$. Then for the first dimension of $\theta$ (the first parameter) we perturb that parameter by a small amount $\eps$, and run the policy to see how the objective function is affected. We repeat this for each dimension of $\theta$, and combine our results to find the direction to move the policy. The method of finite differences is very inefficient and noisy, but it can work, and it has the advantage of working on any arbitrary parametrized policy, even one that is not differentiable.
+
+\subsection{Optimizing Policy Objectives: Policy Gradient}
+
+Finite differences does not rely on the policy being differentiable, but most policy optimization algorithms do, since the gradient of the policy provides a convenient indication of the direction the policy should move in. If our parametrized policy $\pi_\theta$ is perturbed, we are primarily interested in how $\pi_\theta(s, a)$ (the probability $a$ is selected at $s$) will change for each state-action pair, in proportion with how valuable that state-action pair is, $Q^{\pi_\theta}(s, a)$.
+
+For example, imagine a one-step MDP with an initial state $s$. Then
+$$J(\theta) = \EX_{\pi_\theta}(R_t) = \sum_{a\in\mathcal{A}}\pi_\theta(s, a)\mathcal{R}_{s, a}$$
+We are interested in the gradient of our objective function, with respect to $\theta$:
+$$\nabla_\theta J(\theta) = \nabla_\theta\bigg(\sum_{a\in\mathcal{A}}\pi_\theta(s, a)\mathcal{R}_{s, a}\bigg)$$
+$$=\sum_{a\in\mathcal{A}}\nabla_\theta\pi_\theta(s, a)\mathcal{R}_{s, a}$$
+We could stop here, in many cases (such as with a softmax policy) it is much easier to find the gradient of the log-likelihood, $\nabla_\theta \log \pi_\theta(s, a)$, than the gradient of the actual likelihood $\nabla_\theta\pi_\theta(s, a)$. Conveniently, we note that $\nabla_\theta\pi_\theta(s, a) = \pi_\theta(s, a)\nabla_\theta \log \pi_\theta(s, a)$ by basic calculus, so we can plug this in to our equation above:
+$$\nabla_\theta J(\theta) = \sum_{a\in\mathcal{A}}\pi_\theta(s, a)\nabla_\theta \log \pi_\theta(s, a)\mathcal{R}_{s, a}$$
+$$=\EX_{\pi_\theta}[\nabla_\theta\log \pi_\theta(s, a)\mathcal{R}_{s, a}]$$
+Thus, in the one-step MDP, the gradient of the objective function with respect to $\theta$ is equal to the expectation of the gradient of the log-likelihood times the expected reward. This turns out (not proven here) to be true in general as well, except with the action-value $Q^{\pi_\theta}(s, a)$ replacing the immediate reward $\mathcal{R}_{s, a}$. Thus, in general we have the following theorem:
+
+If $\pi_\theta(s, a)$ is differentiable for every $s, a$, then for any objective function (of the three we mentioned above) the gradient is:
+$$\nabla_\theta J(\theta)=\EX_{\pi_\theta}[\nabla_\theta\log \pi_\theta(s, a)Q^{\pi_\theta}(s, a)]$$
+Given the policy gradient, we can use familiar gradient descent to optimize the policy!
+
+\subsection{Policy Gradient: Monte-Carlo Estimation}
+
+Assuming we know $\EX_{\pi_\theta}[\nabla_\theta\log \pi_\theta(s, a)Q^{\pi_\theta}(s, a)]$, policy gradient optimization is easy to perform with SGD. For many policies, $\nabla_\theta\log \pi_\theta(s, a)$ is easy to find. The most elusive quantity in the equation is $Q^{\pi_\theta}(s, a)$ or $\EX_{\pi_\theta}[Q^{\pi_\theta}(s, a)]$, since this is not easily calculated. We usually substitute some estimate of $Q^{\pi_\theta}(s, a)$. The Monte-Carlo estimate is the easiest. We simply replace $Q^{\pi_\theta}(s, a)$ with the return $G_t$ observed after that state-action pair. $G_t$ is an unbiased estimate of $Q^{\pi_\theta}(s, a)$.
+
+\subsection{Actor-Critic Methods}
+
+Monte-Carlo policy gradient methods can work well, but despite $G_t$ being an unbiased estimate of $Q^{\pi_\theta}(s, a)$, it can have very high variance. Actor-critic methods aim to mitigate this. Rather than using the return as an estimate of $Q^{\pi_\theta}(s, a)$, we estimate $Q^{\pi_\theta}(s, a)$ directly, using policy evaluation methods we've discussed previously, such as TD($\lambda$). The estimator of $Q^{\pi_\theta}(s, a)$ is called the \ita{critic}, and the agent updating the policy is called the \ita{actor}.
+
+\subsection{Compatible Function Approximation Theorem}
+
+In actor-critic methods, by using approximate Q-values $Q^{\pi_\theta}(s, a)$, we are using approximate values of the policy gradient $\nabla_\theta J(\theta)$. Unlike MC estimation, however, actor-critic estimations are generally \ita{not} unbiased. In fact, choosing a poor critic can prevent us from approaching the optimal policy. Fortunately, there is a useful theorem, the \ita{Compatible Function Approximation Theorem}, that identifies sufficient conditions to guarantee that our policy gradient leads to convergence to the optimal policy.
+
+Let $w$ be the parameters of our value function approximator, so $Q_w(s, a)\approx Q^{\pi_\theta}(s, a)$. Then if the gradient w.r.t. $w$ of $Q_w(s, a)$ is equal to the gradient of the log-likelihood of the policy at $(s, a)$
+$$\nabla_w Q_w(s, a) = \nabla_\theta \pi_\theta(s, a)$$
+and the parameter $w$ minimizes the MSE compared to the true action-value
+$$w = \argmin_{w'\in W} \EX_{\pi_\theta}\big[(Q^{\pi_\theta}(s, a) - Q_w(s, a))^2\big]$$
+then the policy gradient using the estimated $Q_w$ is equivalent to the policy gradient using the true action-value
+$$\nabla_\theta J(\theta)=\EX_{\pi_\theta}[\nabla_\theta\log \pi_\theta(s, a)Q^{\pi_\theta}(s, a)]$$
+$$= \nabla_\theta J(\theta)=\EX_{\pi_\theta}[\nabla_\theta\log \pi_\theta(s, a)Q_w(s, a)]$$
+
+Thus, so long as we select a compatible action-value approximator, our policy gradient will work just as well as if we were using the true action-value function.
+
+\subsection{Improving Actor-Critics Methods}
+
+There are several ways to improve actor-critic methods. Oftentimes, we replace $Q^{\pi_\theta}(s, a)$ with $A^{\pi_\theta}(s, a)=Q^{\pi_\theta}(s, a) - V^{\pi_\theta}(s)$ where $A^{\pi_\theta}(s, a)$ is called the \ita{advantage function}. This is allowed because it does not affect the expectation of the gradient, so it does not affect the policy gradient, and using the advantage function often produces lower-variance results.
+
+The \ita{natural policy gradient} is a variation on policy gradient which sometimes converges better. The natural policy gradient updates the actor parameters in the direction of the critic parameters.
+
+\section{Model-Based RL}
+
+So far, we have used model-free methods, where we do not aim to learn the distribution of rewards or the state transition matrices. Now we turn to model-based RL, where we aim both to learn the model and to perform policy iteration. In this section we primarily discuss model estimation, because once we have a model we can use our previously-discussed methods to perform policy iteration (or some other planning algorithm).
+
+Formally, we define the model $\mathcal{M} = <\mathcal{S}, \mathcal{A}, \mathcal{P}, \mathcal{R}>$, where the state space $\mathcal{S}$ and action space $\mathcal{A}$ are known, and we aim to estimate the state transition matrices $\mathcal{P}$ and the expected reward distributions $\mathcal{R}$. Typically we assume independence between the next state transition we receive and the reward we receive. That is,
+$$\p[S_{t+1}, R_t | S_t, A_t] = \p[S_{t+1}| S_t, A_t]\p[R_t | S_t, A_t]$$
+
+In model-based RL we are given a set of experiences $<S_1, A_1, R_1, S_2, \ldots, S_T>$. We wish to infer $\mathcal{P}$ and $\mathcal{R}$. If we assume that the state transition and reward are independent, we can solve these problems separately, and they become familiar problems. Inferring $\mathcal{R}$ is a regression problem, in which we aim to use the input $(s, a)$ to infer the output $\mathcal{R^a_s}$. Inferring the state transition matrix is a density estimation problem, in which we aim to use the input $(s, a)$ to infer the probabilities to advance to each possible subsequent state. We generally pick some loss function and parametrize our estimated model $\mathcal{M}_\eta$, and find parameters $\eta$ which minimize the loss.
+
+\subsection{Table Lookup Model}
+
+Call our estimated state transition matrix $\hat{\mathcal{P}}$ and our estimated reward function $\hat{\mathcal{R}}$. The simplest attempt at estimating the model is simply to use the average transition frequency and the average reward:
+$$\hat{\mathcal{P}}^a_{s, s'} = \frac{1}{N(s, a)}\sum_{i=1}^T \mathbbm{1}(S_t, A_t, S_{t+1} = s, a, s')$$
+$$\hat{\mathcal{R}}^a_s = \frac{1}{N(s, a)}\sum_{i=1}^T \mathbbm{1}(S_t, A_t = s, a)R_t$$
+
+Alternatively, (particularly if the state transitions and rewards are \ita{not} independent), we could record the tuple $<s_t, a_t, r_t, s_{t+1}>$ for each time step $t$. Then, to predict the next state and reward from $(s, a)$ we simply take a random tuple $<s, a, \cdot, \cdot>$ which matches $s_t = s, a_t = a$.
+
+\subsection{Sample-Based Planning}
+
+Given that we've estimated a model $\mathcal{M}$ in model-based learning, we might be tempted to use exhaustive search or dynamic programming to find the optimal policy, since these methods take advantage of the fact that we have a model. However, this is often computationally inefficient. \ita{Sample-based planning} applies model-free learning to our model. In sample-based planning, we only use the model to generate samples, which are then fed to any of the model-free learning methods we've discussed before (e.g. SARSA).
+
+\subsection{Dyna and Dyna-Q}
+
+So far, we have discussed estimating the model and planning policy as separate steps. For example, in sample-based planning, we generate the model, and then feed samples from our learned model to our planning algorithm (e.g. MC or SARSA). However, a set of algorithms called Dyna blend model learning and planning. In Dyna-Q, for example, the environment is explored through $\eps$-greedy behavior on $Q$-values, based on the current $Q$-values. Then, the experience gained from exploring the environment is used \ita{both} to update $Q$-values as in model-free learning \ita{and} to update the learned model. Between exploration steps, Dyna-Q also refines its $Q$-value estimates by running sample-based planning on its learned model.
+
+\subsection{Simulation-Based Search}
+
+Once we have an estimated model, we can use our model to plan for the future. \ita{Simulation-based search} incorporates sample-based planning to plan the best current action by exploring the tree starting from the current state. In simulation search, the agent simulates many rounds of experience under a given \ita{simulation policy} $\pi$, and uses these simulations to estimate the state-value functions or action-value functions under $\pi$.
+
+In Monte-Carlo tree search, the policy $\pi$ is simulated many times, and action-value functions for $\pi$ are estimated using average MC return. Then, the policy is improved using something like $\eps$-greedy on the action-value functions previously estimated. That is, $\pi_{t+1}$ is $\eps$-greedy on $\hat{Q}_\pi(s, a)$.
+
+\end{document}
