@@ -1,10 +1,11 @@
 \documentclass{article}
+\usepackage[margin=1.0in]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
 \usepackage{bbm}
 \usepackage{amssymb}
-\DeclareMathOperator*{\argmax}{arg\,max}
-\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator{\argmax}{arg\,max}
+\DeclareMathOperator{\argmin}{arg\,min}
 \DeclareMathOperator{\EX}{\mathbb{E}}
 \DeclareMathOperator{\RE}{\mathbb{RE}}
 \newcommand{\ita}{\textit}
@@ -68,7 +69,7 @@ $$q_\pi(s, a) = \mathcal{R}^a_s + \gamma\sum_{s'\in\mathcal{S}}P^a_{ss'}v_\pi(s'
 Combining these two equations, we can get an equation for the state-value function without involving the action-value function, and similarly we can get an equation for the action-value function without involving the state-value function…
 $$v_\pi(s) = \sum_{a\in\mathcal{A}} \pi(a|s)\bigg(\mathcal{R}^a_s + \gamma\sum_{s'\in\mathcal{S}}P^a_{ss'}v_\pi(s')\bigg)$$
 $$q_\pi(s, a) =  \mathcal{R}^a_s + \gamma\sum_{s'\in\mathcal{S}}P^a_{ss'}\bigg(\sum_{a\in\mathcal{A}} \pi(a|s')q_\pi(a, s')\bigg)$$
-Similar to the calculation of value in an MRP, we can express the calculation of all $v_\pi$ (that is, $v_\pi(s) for all $s$), in matrix form:
+Similar to the calculation of value in an MRP, we can express the calculation of all $v_\pi$ (that is, $v_\pi(s)$ for all $s$), in matrix form:
 $$v_\pi = \mathcal{R}^\pi + \gamma P^\pi v_\pi$$
 $$v_\pi = (I - \gamma P^\pi)^{-1}\mathcal{R}^\pi$$
 
