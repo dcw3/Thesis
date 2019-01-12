@@ -1,4 +1,5 @@
 \documentclass{article}
+\usepackage[margin=1.0in]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
 \usepackage{bbm}
@@ -50,5 +51,14 @@ How to specify priors for agent?
 \section{Pseudocode of MDP Simulator}
 
 The pseudocode I have in mind for the MDP simulator is in simulator\_pseudocode.py in this repository.
+
+\section{Defining a Random MDP}
+The user specifies $a$, the number of actions, and $m$, the number of states. We then create $a\cdot m$ i.i.d. vectors of length $m$, each of which represents a vector of state-action transition probabilities.
+
+There are two options for choosing these vectors. One is to specify a set number of zero-values for each transition vector, and then choose the remaining values uniformly or logistically. Another option is to choose $m$ values $a_1, \ldots, a_m$ from a standard normal distribution, and then allow the user to specify a cutoff value $\alpha$. Values $a_i$ that are below $\alpha$ are set to $-\infty$. Then, (if any values are remaining) the remaining transition probabilities are set proportional to the value $e^{a_i \beta}$ where $\beta$ is a user-chosen parameter, $\beta\in[0,\infty)$. Higher values of $\beta$ and higher values of $\alpha$ lead to a lower-entropy (more predictable) MDP.
+
+To choose reward functions, the user can specify $m$ values that act as means for normal distributions. The user could also provide $m$ functions as reward functions. We should also provide the option for the user to ask the program to automatically choose reward functions, 
+
+The starting state will be state $1$ by default.
 
 \end{document}
