@@ -15,8 +15,8 @@
 \newcommand{\p}{\mathbb{P}}
 
 \title{RL Methods Review}
-\author{dcw3}
-\date{October 2018}
+\author{Daniel Changyan Wang}
+\date{January 2019}
 
 \begin{document}
 
@@ -176,7 +176,7 @@ so the adjustment we make to $V(S_t)$ moves towards our estimate of the value of
 
 \subsection{MC vs. TD}
 
-In general, MC is guaranteed to converge to the answer, and is simple to use. Unlike TD, doesn't assume anything about the underlying Markov process, so it is robust in situations where the situation isn't perfectly Markov. However, MC converges more slowly because it relies on brute force for each state, rather than partially sharing information between states as TD does. In addition, MC is more sensitive to random variances in the sample.
+In general, MC is guaranteed to converge to the answer, and is simple to use. Unlike TD, MC doesn't assume anything about the underlying Markov process, so it is robust in situations where the situation isn't perfectly Markov. However, MC converges more slowly because it relies on brute force for each state, rather than partially sharing information between states as TD does. This slower convergence is more noticeable when the data is noisy. That is, MC is more sensitive to random variances in the sample.
 
 \subsection{n-step TD Returns and TD($\lambda$) Learning}
 
@@ -206,7 +206,7 @@ Backward-view TD is roughly equivalent to forward-view TD. In fact, if all updat
 
 Similar to how DP prediction was used to iteratively improve policy (by acting greedily with respect to the previous round of estimated state-value functions), we can use our model-free predictions to iteratively improve policy. Note that we can't copy the method exactly, because state-value functions alone cannot provide guidance in a model-free environment, because we don't have full information about how our actions influence which states we go to. Instead, we must use action-value estimates $Q(s, a)$ which are calculated similarly to $V(s)$ using MC or TD.
 
-Whereas DP control was simple (just act greedily), a purely greedy strategy is a bad choice for model-free control. A DP policy can act greedily with confidence because it knows the entire MDP. In model-free control, the policy must earn plenty of reward \ita{and} explore in order to identify possibly better strategies. Accordingly, acting greedily could prevent proper exploration and lock the agent in a sub-optimal strategy.
+Whereas DP control was simple (just act greedily), a purely greedy strategy is a bad choice for model-free control. A DP policy can act greedily with confidence because it knows the entire MDP. In model-free control, the policy must earn plenty of reward \ita{and} continue to explore in order to identify possibly better strategies. Accordingly, acting greedily could prevent proper exploration and lock the agent in a sub-optimal strategy.
 
 \subsection{$\eps$-Greedy and GLIE Policies}
 
@@ -257,13 +257,13 @@ Off-policy Q-learning aims to learn action-value functions while off-policy. In 
 \begin{equation}\label{eq:q_learning_update}
 Q(S_t, A_t) \rightarrow Q(S_t, A_t) + \alpha\bigg(R_t + \gamma Q(S_{t+1}, A'_{t+1}) - Q(S_t, A_t)\bigg)
 \end{equation}
-so we update the action-value towards $R_t + \gamma Q(S_{t+1}, A'_{t+1})$. Note that for a good result, you should pick a behavior policy that actually explores most or all state-action pairs many times, otherwise many Q-values will not be accurate due to low sample size. A simple example is when $\pi$ is greedy. Then $\gamma Q(S_{t+1}, A'_{t+1}) = \max_{a} \gamma Q(S_{t+1}, a)$. Q-learning converges to the correct estimation of the action-value function.
+so we update the action-value towards $R_t + \gamma Q(S_{t+1}, A'_{t+1})$. Note that for a good result, you should pick a behavior policy $\mu$ that actually explores most or all state-action pairs many times, otherwise many Q-values will not be accurate due to low sample size. A simple and common choice for $\pi$ is the greedy function. In this case, $\gamma Q(S_{t+1}, A'_{t+1}) = \max_{a} \gamma Q(S_{t+1}, a)$. Q-learning converges to the correct estimation of the action-value function.
 
 \section{Value Function Approximation}
 
 The model-free methods for prediction and control usually store a value function for every state, or every state-action pair. This becomes impossible for very large Markov processes, such as most board or video games. For MDP's too large to record (or properly estimate) every value function, we instead create a \ita{value function approximator} $\hat{v}(s, w)\approx v(s)$ or $\hat{q}(s, a, w) \approx q(s, a)$. $w$ is the parameter that determines how the value function approximator estimates the value of a state or state-action pair. Often, $w$ is the weights in a linear combination of features or a neural network.
 
-Note that so far we have been vague about what a value function approximator inputs and outputs, exactly. This is because a value function approximator has several options. It can intake a state $s$ and output a value estimate for it $\hat{v}(s, w)$, intake a state $s$ and action $a$ and output $\hat{q}(s, a, w)$, or input a state $s$ and output a predicted state-action value for every action $a$: $\big\{\hat{q}(s, a, w)\big\}\forall a\in\mathcal{A}$. Broadly speaking, our aim is to use value function approximators as a substitute for learning every single state-value function. Then, just as we used our learned state-value functions to create an improved policy which we then aim to learn the value functions for, we will use our learned value function approximators to create an improved policy, for which we then aim to learn a new value function approximator, and so on. So, how to train our value function approximators?
+Note that we have been vague about what a value function approximator inputs and outputs, exactly. This is because a value function approximator has several options. It can intake a state $s$ and output a value estimate for it $\hat{v}(s, w)$, intake a state $s$ and action $a$ and output $\hat{q}(s, a, w)$, or input a state $s$ and output a predicted state-action value for every action $a$: $\big\{\hat{q}(s, a, w)\big\}\forall a\in\mathcal{A}$. Broadly speaking, our aim is to use value function approximators as a substitute for learning every single state-value function. Then, just as we used our learned state-value functions to create an improved policy which we then aim to learn the value functions for, we will use our learned value function approximators to create an improved policy, for which we then aim to learn a new value function approximator, and so on. So, how to train our value function approximators?
 
 \subsection{Incremental (Online) Methods}
 
@@ -280,7 +280,7 @@ E_t = \gamma\lambda E_{t-1} + \mathbf{x}(S_t)
 \end{equation}
 where $\delta_t$ is the target.
 
-The above methods are for state-value estimation. Action-value estimation is nearly identical. Because we are estimating the value of a particular state and action, the feature vector contains features of both the state and the action. Thus, we call the feature vector $\mathbb{v}(S, A)$ instead of $\mathbb{v}(S)$.
+The above methods are for state-value estimation. Action-value estimation is nearly identical. Because we are estimating the value of a particular state and action, the feature vector contains features of both the state and the action. Thus, we call the feature vector $\mathbf{v}(S, A)$ instead of $\mathbf{v}(S)$.
 
 Using these methods to train our value function approximator, we can then use it in our previous policy iteration algorithms such as $\eps$-greedy policy improvement.
 
@@ -381,7 +381,7 @@ then the policy gradient using the estimated $Q_w$ is equivalent to the policy g
 
 Thus, so long as we select a compatible action-value approximator, our policy gradient will work just as well as if we were using the true action-value function.
 
-\subsection{Improving Actor-Critics Methods}
+\subsection{Improving Actor-Critic Methods}
 
 There are several ways to improve actor-critic methods. Oftentimes, we replace $Q^{\pi_\theta}(s, a)$ with $A^{\pi_\theta}(s, a)=Q^{\pi_\theta}(s, a) - V^{\pi_\theta}(s)$ where $A^{\pi_\theta}(s, a)$ is called the \ita{advantage function}. This is allowed because it does not affect the expectation of the gradient, so it does not affect the policy gradient, and using the advantage function often produces lower-variance results.
 
