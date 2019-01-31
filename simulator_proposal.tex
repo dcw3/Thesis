@@ -57,8 +57,26 @@ The user specifies $a$, the number of actions, and $m$, the number of states. We
 
 There are two options for choosing these vectors. One is to specify a set number of zero-values for each transition vector, and then choose the remaining values uniformly or logistically. Another option is to choose $m$ values $a_1, \ldots, a_m$ from a standard normal distribution, and then allow the user to specify a cutoff value $\alpha$. Values $a_i$ that are below $\alpha$ are set to $-\infty$. Then, (if any values are remaining) the remaining transition probabilities are set proportional to the value $e^{a_i \beta}$ where $\beta$ is a user-chosen parameter, $\beta\in[0,\infty)$. Higher values of $\beta$ and higher values of $\alpha$ lead to a lower-entropy (more predictable) MDP.
 
-To choose reward functions, the user can specify $m$ values that act as means for normal distributions. The user could also provide $m$ functions as reward functions. We should also provide the option for the user to ask the program to automatically choose reward functions, 
+To choose reward functions, the user can specify $m$ values that act as means for normal distributions. The user could also provide $m$ functions as reward functions. We should also provide the option for the user to ask the program to automatically choose reward functions, which could be normal distributions with normally-distributed means.
 
 The starting state will be state $1$ by default.
+
+\section{MDP Generation Process}
+
+Generally speaking, we can view generating an MDP as an iterative process. For now, let us consider a common setting where there is no reward, except for two terminal states, one of which is high-reward and one of which is low-reward.
+
+First, we choose a state $s$ whose transition probabilities are not yet defined. Then, for each action $a$, we choose the states that are reachable from $s$ in one step under action $a$. Then, from within those destination states, we define a transition probability vector with desired entropy. Then, having chosen the transition probability vectors for all actions from $s$, we choose a new state $s$ and begin again.
+
+There is a lot of vagueness and flexibility in this process. The simplest part is choosing a transition probability vector once we have chosen the destination states. If there are $k$ destination states, we use a $k$-dimensional symmetric Dirichlet distribution function, with the concentration parameter $\alpha$. Higher values of $\alpha$ correspond to higher entropy, and this can be specified from the user. For example, for any state-action pair, $\alpha$ could be drawn from a normal distribution with a certain mean.
+
+The next state to choose probabilities for could be chosen from any of the destination states.
+
+The main interesting part would be choosing the destination states of each state-action pair. There are countless properties users might be interested in testing here, so it is hard to account for all possible MDP's the user may wish to create. However, the following are a few properties that come to mind:
+
+\begin{itemize}
+  \item How well-structured is the MDP? At the one extreme, all actions from a given state could have the same destination states, just with different probabilities. At the opposite extreme, the destination states of different actions could be completely independent though identically distributed (i.i.d.). The simplest way to specify this would be to specify a distribution for $n_s$ the number of possible destination states, as well as a distribution on $k_{s,a}$ the number of destination states each state-action pair has. Then, each state-action pair's destination states would be uniformly chosen from the $\binom{n_s}{k_{s,a}}$ possible sets of destination states.
+  \item How frequently do the states feed into the terminal states? The simplest way to specify this would be to specify some parameter $p$ that grew as the number of states we have yet to specify transition probability vectors for dwindles. $p$ could be the probability that a state is connected to a terminal state.
+  \item How recurrent is the MDP? This could be specified as a fraction of the destination states that feed back to a state whose transition probability vectors we have already defined. However, this parameter interacts with the frequency of feeding into terminal states, and I'm not 100\% clear on that yet.
+\end{itemize}
 
 \end{document}
