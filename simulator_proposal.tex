@@ -87,7 +87,7 @@ Then, $\lim_{\beta\to0} \EX[H[X]] = 0$, as desired. I did not prove that $\lim_{
 
 Thus, if a user specified a desired amount of entropy, we could vary the value of $\beta$ to accommodate it. However, given a desired expected entropy $h'$, I am not sure how to find $\beta$ such that $\EX[H[X]] = h'$ where $X\sim Dir_k(\beta)$. In particular, this is because I do not know how to find the inverse of the expression we obtained for $\EX[H[X]]$. The best that comes to mind is some numerical method which takes advantage of the fact that $\EX[H[X]]$ appears to be monotonic in $\beta$.
 
-\section{Creating Correlation Between Dirichlet Distributions}
+\section{Correlating Dirichlet Distributions: Option 1}
 I did not entirely understand how to obtain the desired correlation between Dirichlet distributions. The best I had was the following:
 
 The mean of a Dirichlet distribution with parameters $\alpha_1, \alpha_2,\ldots,\alpha_k$ is $[\alpha_1/\alpha_0, \ldots,\alpha_k/\alpha_0]$. Then, for a given vector $v$, we can make a particular neighbor $w$ similar to $v$ by drawing $w$ from $Dir(v_1, \ldots, v_k)$, i.e. using a Dirichlet distribution with parameters equal to entries of $v$.
@@ -95,4 +95,9 @@ The mean of a Dirichlet distribution with parameters $\alpha_1, \alpha_2,\ldots,
 If $X\sim Dir_k(\beta)$,
 $$Var(X_i) = \frac{\alpha_i(\alpha_0 - \alpha_i)}{\alpha_0^2(\alpha_0 + 1)}$$
 Then, multiplying all $\alpha$ by a factor $k$ will approximately multiply the variance of $X_i$ by $1/k^2$. Then, to increase the "strength" of the correlation, we could draw $w$ from $Dir(kv_1, \ldots, kv_k)$ for some $k > 1$.
+
+If there are multiple neighbors $\{v^1, v^2, \ldots\}$, then we could use their average.
+
+\section{Correlating Dirichlet Distributions: Option 2}
+Another option for creating similar neighbors is to "mix" nearby neighbors. That is, initialize each state-action transition matrix as a Dirichlet distribution, independently. For every transition vector $w$, with neighbors $\{v_1, v_2, \ldots, v_n\}$, let $\overline{v}$ be the average of the $v_i$. Update $w$ as $w' = rw + (1-r)\overline{v}$, with $r\in[0, 1]$. However, I have not analyzed this in terms of mathematical properties.
 \end{document}
