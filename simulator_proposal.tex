@@ -76,7 +76,23 @@ The main interesting part would be choosing the destination states of each state
 \begin{itemize}
   \item How well-structured is the MDP? At the one extreme, all actions from a given state could have the same destination states, just with different probabilities. At the opposite extreme, the destination states of different actions could be completely independent though identically distributed (i.i.d.). The simplest way to specify this would be to specify a distribution for $n_s$ the number of possible destination states, as well as a distribution on $k_{s,a}$ the number of destination states each state-action pair has. Then, each state-action pair's destination states would be uniformly chosen from the $\binom{n_s}{k_{s,a}}$ possible sets of destination states.
   \item How frequently do the states feed into the terminal states? The simplest way to specify this would be to specify some parameter $p$ that grew as the number of states we have yet to specify transition probability vectors for dwindles. $p$ could be the probability that a state is connected to a terminal state.
-  \item How recurrent is the MDP? This could be specified as a fraction of the destination states that feed back to a state whose transition probability vectors we have already defined. However, this parameter interacts with the frequency of feeding into terminal states, and I'm not 100\% clear on that yet.
+  \item How recurrent is the MDP? This could be specified as a fraction, $f$, of the destination states that feed back to a state whose transition probability vectors we have already defined.
 \end{itemize}
+However, the parameter $f$ interacts with the parameter $p$, and I'm not 100\% clear on how that should work. For example, one possibility is that we could introduce a time variable $t$ as we generate the MDP, where $t$ is the number of states whose transition vectors are already determined (i.e. the number of iterations our generation process has done).
 
+\section{Finding a Dirichlet Distribution with Desired Entropy}
+Call $Dir_k(\beta)$ a symmetric Dirichlet distribution with parameter $\beta$, of dimension $k$. Then, if $X$ is a random vector of length $k$, and $X\sim Dir_k(\beta)$, then the expected entropy of $X$ is:
+$$\EX[H[X]] = \psi(k\beta + 1) - \psi(\beta + 1)$$
+Then, $\lim_{\beta\to0} \EX[H[X]] = 0$, as desired. I did not prove that $\lim_{\beta\to\infty} \EX[H[X]] = \log k$, though it makes sense and appears to hold for several values of $k$ when I did some simple computations.
+
+Thus, if a user specified a desired amount of entropy, we could vary the value of $\beta$ to accommodate it. However, given a desired expected entropy $h'$, I am not sure how to find $\beta$ such that $\EX[H[X]] = h'$ where $X\sim Dir_k(\beta)$. In particular, this is because I do not know how to find the inverse of the expression we obtained for $\EX[H[X]]$. The best that comes to mind is some numerical method which takes advantage of the fact that $\EX[H[X]]$ appears to be monotonic in $\beta$.
+
+\section{Creating Correlation Between Dirichlet Distributions}
+I did not entirely understand how to obtain the desired correlation between Dirichlet distributions. The best I had was the following:
+
+The mean of a Dirichlet distribution with parameters $\alpha_1, \alpha_2,\ldots,\alpha_k$ is $[\alpha_1/\alpha_0, \ldots,\alpha_k/\alpha_0]$. Then, for a given vector $v$, we can make a particular neighbor $w$ similar to $v$ by drawing $w$ from $Dir(v_1, \ldots, v_k)$, i.e. using a Dirichlet distribution with parameters equal to entries of $v$.
+
+If $X\sim Dir_k(\beta)$,
+$$Var(X_i) = \frac{\alpha_i(\alpha_0 - \alpha_i)}{\alpha_0^2(\alpha_0 + 1)}$$
+Then, multiplying all $\alpha$ by a factor $k$ will approximately multiply the variance of $X_i$ by $1/k^2$. Then, to increase the "strength" of the correlation, we could draw $w$ from $Dir(kv_1, \ldots, kv_k)$ for some $k > 1$.
 \end{document}
