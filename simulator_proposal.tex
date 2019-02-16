@@ -94,10 +94,17 @@ The mean of a Dirichlet distribution with parameters $\alpha_1, \alpha_2,\ldots,
 
 If $X\sim Dir_k(\beta)$,
 $$Var(X_i) = \frac{\alpha_i(\alpha_0 - \alpha_i)}{\alpha_0^2(\alpha_0 + 1)}$$
-Then, multiplying all $\alpha$ by a factor $k$ will approximately multiply the variance of $X_i$ by $1/k^2$. Then, to increase the "strength" of the correlation, we could draw $w$ from $Dir(kv_1, \ldots, kv_k)$ for some $k > 1$.
+Then, multiplying all $\alpha$ by a factor $k$ will approximately multiply the variance of $X_i$ by $1/k^2$. Then, to increase the "strength" of the correlation, we could draw $w$ from $Dir(kv_1, \ldots, kv_k)$ for some $k > 1$, and we could similarly decrease the strength of correlation by choosing $k < 1$.
 
-If there are multiple neighbors $\{v^1, v^2, \ldots\}$, then we could use their average.
+If there are multiple neighbors $\{v^1, v^2, \ldots\}$, then we could use their average, vall is $\overline{v}$.
+
+In addition, rather than setting the parameters directly to the average of $\overline{v}$, we could set them to a mixture of $\overline{v}$ and a uniform vector $\beta$ (which represents the prior distribution). For example, we could set them to be equal to $r\overline{v} + (1-r)\beta$.
+
+A substantial concern I have is, how to manage the two parameters. In particular, our answer is:
+$$k\bigg(r\overline{v} + (1-r)\beta\bigg)$$
+where $k$ influences variance and $r$ influences the mean. It's not obvious to me how $k$ and $r$ interact to calculate the actual correlation.
 
 \section{Correlating Dirichlet Distributions: Option 2}
 Another option for creating similar neighbors is to "mix" nearby neighbors. That is, initialize each state-action transition matrix as a Dirichlet distribution, independently. For every transition vector $w$, with neighbors $\{v_1, v_2, \ldots, v_n\}$, let $\overline{v}$ be the average of the $v_i$. Update $w$ as $w' = rw + (1-r)\overline{v}$, with $r\in[0, 1]$. However, I have not analyzed this in terms of mathematical properties.
+
 \end{document}
