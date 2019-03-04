@@ -1,3 +1,4 @@
+import numpy as np
 class TerminalSimulator:
     def __init__(self, terminal_mdp, agent):
         self.mdp = terminal_mdp
@@ -7,7 +8,6 @@ class TerminalSimulator:
     def simulate(self, n_episodes, initial_state):
         cum_rewards = [0] * n_episodes
         mdp = self.mdp
-        self.agent.initialize(mdp.n_states, mdp.n_actions)
         for i in range(n_episodes):
             action = self.agent.begin_episode(initial_state, mdp.n_states, mdp.n_actions)
             current_state = initial_state

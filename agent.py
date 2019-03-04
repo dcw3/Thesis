@@ -1,11 +1,8 @@
-class Agent:
+class BaseAgent:
     def __init__(self):
         pass
 
     def reset(self):
-        pass
-
-    def initialize(self, num_states, num_actions):
         pass
 
     # return initial action
@@ -16,7 +13,5 @@ class Agent:
         pass
 
     # do I need to specify previous_state and action? Or should I expect the Agent to keep track of that itself?
-    def step(self, reward, current_state, time):
+    def step(self, reward, state, time):
         return 0
-
-
