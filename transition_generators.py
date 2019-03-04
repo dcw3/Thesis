@@ -16,7 +16,7 @@ def dirichlet_transitions(alpha=1.0, n_states=1, n_actions=1):
 import networkx as nx
 from networkx.drawing.nx_agraph import write_dot
 
-def write_to_dot(transition_matrix, path='mc.dot'):
+def write_to_dot(transition_matrix, path='mc.dot', cutoff=0, terminal_states=[]):
     G = nx.DiGraph()
     edge_labels = {}
     n_states = len(transition_matrix[0])
@@ -24,7 +24,8 @@ def write_to_dot(transition_matrix, path='mc.dot'):
     for i in range(n_states):
         for j in range(n_states):
             rate = transition_matrix[i][j]
-            G.add_edge(i, j, weight=rate, label="{:.02f}".format(rate))
-            edge_labels[(i, j)] = "{:.02f}".format(rate)
+            if rate > cutoff and i not in terminal_states:
+                G.add_edge(i, j, weight=rate, label="{:.02f}".format(rate))
+                edge_labels[(i, j)] = "{:.02f}".format(rate)
 
     write_dot(G, path)
