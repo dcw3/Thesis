@@ -192,11 +192,11 @@ G^\lambda_t = \sum_{i=1}^\infty (1-\lambda)\lambda^{i-1}G^{(i)}_t
 \end{equation}
 In TD($\lambda$), we define the TD target as $G^\lambda_t$. Note that for $\lambda = 0$, if we let $0^0 = 1$, $G^\lambda_t = G^{(1)}_t$ as expected. In general, larger values of $\lambda$ make the algorithm increasingly similar to MC and less similar to TD(0).
 
-\subsection{Backwards-View TD}
+\subsection{Backward-View TD}
 
 The TD learning described above is called \ita{forward-view TD learning} because it updates state-value estimates based on future rewards. If forward-view TD($\lambda$) were programmed literally, it would not update any state-value estimate until the end of the episode. A variation, called \ita{backward-view TD learning}, has the advantage that, unlike MC or forward-view TD, it updates state-value estimates online (on-the-fly) so it does not need complete episodes in order to learn. Each time a reward is received, backward-view TD updates all previous states. Backward-view TD calculates how much a state $s$ would have updated its state-value function, using a value called the \ita{eligibility trace} $E_t(s)$, which decays by a factor of $\gamma\lambda$ at each time step but increases by $1$ if the current state is $s$:
 \begin{equation}\label{eq:eligibility_trace_update}
-E_t(s) = \gamma\lambda E_{t-1}(s)
+E_t(s) = \gamma\lambda E_{t-1}(s) + \mathbbm{1}(S_t = s)
 \end{equation}
 When a reward $R_t$ is received, we set our TD target as $R_t + \gamma V(S_{t+1}) - V(s)$, similar to TD(0). Then, we update \ita{every} state by $\alpha E_t(s)\bigg(R_t + \gamma V(S_{t+1}) - V(s)\bigg)$, so we multiply the TD target by the eligibility trace and then update the state.
 
