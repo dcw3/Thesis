@@ -20,7 +20,7 @@ class SarsaAgent(BaseAgent):
             self.q_vals = np.array(self.init_q_vals, copy=True)
         else:
             # self.init_q_vals = np.random.randn(self.n_states, self.n_actions)
-            self.init_q_vals = np.ones((self.n_states, self.n_actions))
+            self.init_q_vals = np.zeros((self.n_states, self.n_actions))
             self.q_vals = np.array(self.init_q_vals, copy=True)
 
         if epsilon_function is not None:
@@ -54,11 +54,9 @@ class SarsaAgent(BaseAgent):
 
         epsilon = self.epsilon_function(self.n_steps_trained)
         action = epsilon_random(epsilon, self.q_vals[state])
-
-        last_q_val = self.q_vals[self.last_state][self.last_action]
         td_target = reward + self.discount_rate * self.q_vals[state][action]
-        td_signal = self.learning_rate * (td_target - last_q_val)
-        self.q_vals += self.eligibility_traces * self.learning_rate * td_signal
+        td_signals = self.learning_rate * (td_target - self.q_vals)
+        self.q_vals += self.eligibility_traces * td_signals
 
         self.last_action = action
         self.last_state = state
