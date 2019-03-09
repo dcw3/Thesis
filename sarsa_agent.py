@@ -19,7 +19,6 @@ class SarsaAgent(BaseAgent):
             self.init_q_vals = np.array(init_q_vals, copy=True)  # create a deep copy
             self.q_vals = np.array(self.init_q_vals, copy=True)
         else:
-            # self.init_q_vals = np.random.randn(self.n_states, self.n_actions)
             self.init_q_vals = np.zeros((self.n_states, self.n_actions))
             self.q_vals = np.array(self.init_q_vals, copy=True)
 
