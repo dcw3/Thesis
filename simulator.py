@@ -1,4 +1,6 @@
 import numpy as np
+
+
 class TerminalSimulator:
     def __init__(self, terminal_mdp, agent):
         self.mdp = terminal_mdp
