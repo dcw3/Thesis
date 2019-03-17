@@ -11,7 +11,8 @@ class MDP:
         self.n_states = len(reward_functions)
         self.n_actions = len(transition_matrices)
         self.transition_matrices = transition_matrices
-        self.reward_functions = reward_functions
+        self.reward_functions = reward_functions  # for now, the reward functions are specific to a state
+        # in the future, should add reward functions that change based on the action chosen
 
     def step(self, state, action, time):
         transition_probs = self.transition_matrices[action][state]
