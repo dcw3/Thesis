@@ -6,10 +6,7 @@ import numpy as np
 def value_iteration(mdp, n_iterations=10000, discount_rate=0.9, mean_rewards=None):
     value_estimates = np.zeros(mdp.n_states)
     if mean_rewards is None:
-        mean_rewards = np.zeros(mdp.n_states)
-        for state in range(mdp.n_states):
-            # average the reward function over 1000 time points
-            mean_rewards[state] = np.mean([mdp.reward_functions[state](t) for t in range(1000)])
+        mean_rewards = get_mean_rewards(mdp.reward_functions)
 
     expected_rewards = np.zeros((mdp.n_states, mdp.n_actions))
     for state in range(mdp.n_states):
@@ -26,3 +23,21 @@ def value_iteration(mdp, n_iterations=10000, discount_rate=0.9, mean_rewards=Non
                 value_estimates[state] = np.max(estimated_action_values)
 
     return value_estimates
+
+
+def get_mean_rewards(reward_functions):
+    n = len(reward_functions)
+    mean_rewards = np.zeros(n)
+    for i in range(n):
+        # average the reward function over 1000 time points
+        mean_rewards[i] = np.mean([reward_functions[i](t) for t in range(1000)])
+    return mean_rewards
+
+
+def action_value_estimates(mdp, state_value_estimates):
+    q_estimates = np.zeros((mdp.n_states, mdp.n_actions))
+    for state in range(mdp.n_states):
+        for action in range(mdp.n_actions):
+            q_estimates[state][action] = np.dot(mdp.transition_matrices[action][state], state_value_estimates)
+    
+    return q_estimates
