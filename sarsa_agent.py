@@ -63,6 +63,9 @@ class SarsaAgent(BaseAgent):
         self.eligibility_traces[self.last_state][self.last_action] += 1
         return action
 
+    def step_no_learn(self, reward, state, time):
+        return np.argmax(self.q_vals[state])
+
 
 def epsilon_random(epsilon, state_q_vals):
     n_actions = len(state_q_vals)

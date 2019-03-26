@@ -15,3 +15,6 @@ class BaseAgent:
     # do I need to specify previous_state and action? Or should I expect the Agent to keep track of that itself?
     def step(self, reward, state, time):
         return 0
+
+    def step_no_learn(self, reward, state, time):
+        pass
