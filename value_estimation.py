@@ -34,10 +34,20 @@ def get_mean_rewards(reward_functions):
     return mean_rewards
 
 
-def action_value_estimates(mdp, state_value_estimates):
+def action_value_estimates(mdp, discount_rate, state_value_estimates, mean_rewards=None):
+    if mean_rewards is None:
+        mean_rewards = get_mean_rewards(mdp.reward_functions)
+
+    expected_rewards = np.zeros((mdp.n_states, mdp.n_actions))
+    for state in range(mdp.n_states):
+        for action in range(mdp.n_actions):
+            transition_probs = mdp.transition_matrices[action][state]
+            expected_rewards[state][action] = np.dot(transition_probs, mean_rewards)
+
     q_estimates = np.zeros((mdp.n_states, mdp.n_actions))
     for state in range(mdp.n_states):
         for action in range(mdp.n_actions):
-            q_estimates[state][action] = np.dot(mdp.transition_matrices[action][state], state_value_estimates)
+            next_state_val = np.dot(mdp.transition_matrices[action][state], state_value_estimates)
+            q_estimates[state][action] = expected_rewards[state][action] + discount_rate * next_state_val
     
     return q_estimates
