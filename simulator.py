@@ -11,9 +11,12 @@ class TerminalSimulator:
         episode_rewards = [0] * n_episodes
         mdp = self.mdp
         for i in range(n_episodes):
-            action = self.agent.begin_episode(initial_state, mdp.n_states, mdp.n_actions)
-            current_state = initial_state
             current_time = 0
+            current_state = initial_state
+            if no_learning:
+                action = self.agent.step_no_learn(None, current_state, 0)
+            else:
+                action = self.agent.begin_episode(initial_state, mdp.n_states, mdp.n_actions)
             while current_state not in mdp.terminal_states:
                 current_time += 1
                 reward, current_state = mdp.step(current_state, action, current_time)
