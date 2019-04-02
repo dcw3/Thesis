@@ -25,7 +25,7 @@ class SarsaAgent(BaseAgent):
         if epsilon_function is not None:
             self.epsilon_function = epsilon_function
         else:
-            self.epsilon_function = lambda x: min((10/x, 1))
+            self.epsilon_function = lambda x: min((100/x, 1))
 
         super().__init__()
 
