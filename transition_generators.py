@@ -1,6 +1,7 @@
 import numpy as np
 import numbers
 
+
 # i.i.d.
 def dirichlet_transitions(alpha=1.0, n_states=1, n_actions=1):
     if isinstance(alpha, numbers.Real):
@@ -11,10 +12,15 @@ def dirichlet_transitions(alpha=1.0, n_states=1, n_actions=1):
 
     return transition_matrices
 
+
 # TODO: allow n_dest_states to be a function rather than a constant
 # n_dest_per_state is the number of states reachable in one step by each state
 # n_dest_per_action is the number of states reachable in one step by each state-action pair
-def simple_transitions(n_states=1, n_dest_per_action=None, n_dest_per_state=None, alpha=1.0, n_actions=1):
+def simple_transitions(n_states=3, n_dest_per_action=None, n_dest_per_state=None, alpha=1.0, n_actions=1, terminal_states=None):
+    if terminal_states is None:
+        if n_states > 2:
+            terminal_states = [n_states - 1, n_states - 2]
+
     if isinstance(n_dest_per_action, numbers.Real):
         n_dest_per_action = np.array([n_dest_per_action] * n_states)
 
@@ -27,7 +33,8 @@ def simple_transitions(n_states=1, n_dest_per_action=None, n_dest_per_state=None
         alpha_arr = alpha
 
     transition_matrices = [np.zeros((n_states, n_states)) for _ in range(n_actions)]
-    for s in range(n_states):
+    non_terminal_states = set(range(n_states)) - set(terminal_states)
+    for s in non_terminal_states:
         reachable_states = np.random.choice(n_states, size=n_dest_per_state[s], replace=False)
         for a in range(n_actions):
             dest_states = np.random.choice(reachable_states, size=n_dest_per_action[s], replace=False)
@@ -40,8 +47,10 @@ def simple_transitions(n_states=1, n_dest_per_action=None, n_dest_per_state=None
 
     return transition_matrices
 
+
 import networkx as nx
 from networkx.drawing.nx_agraph import write_dot
+
 
 def write_to_dot(transition_matrix, path='mc.dot', cutoff=0, terminal_states=[]):
     G = nx.DiGraph()
