@@ -48,6 +48,29 @@ def simple_transitions(n_states=3, n_dest_per_action=None, n_dest_per_state=None
     return transition_matrices
 
 
+def get_reachable_states(transition_matrices, origin_state=0):
+    n_actions = len(transition_matrices)
+    n_states = len(transition_matrices[0])
+    all_reachable_states = {origin_state}
+    adjacent_states = dict()
+    for state in range(n_states):
+        adjacent = set()
+        for action in range(n_actions):
+            transition_probs = transition_matrices[action][state]
+            adjacent.update(np.nonzero(transition_probs)[0])
+        adjacent_states[state] = adjacent
+
+    while True:
+        new_reachable_states = all_reachable_states.copy()
+        for state in all_reachable_states:
+            new_reachable_states.update(adjacent_states[state])
+
+        if new_reachable_states == all_reachable_states:
+            return all_reachable_states
+        else:
+            all_reachable_states = new_reachable_states
+
+
 import networkx as nx
 from networkx.drawing.nx_agraph import write_dot
 
