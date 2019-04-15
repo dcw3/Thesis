@@ -71,6 +71,126 @@ def get_reachable_states(transition_matrices, origin_state=0):
             all_reachable_states = new_reachable_states
 
 
+# n_dest_per_state, n_recurrent_dest_per_state, etc. are real numbers or functions which take the state number as input
+# terminal_prob, recurrent_prob, n_dest_per_action, n_recurrent_dest_per_action, etc are real numbers or functions which
+# take the state AND action number as inputs
+# the terminal states are the last n_terminal_states states (i.e. the highest-numbered ones)
+def iterative_transitions_w_terminals(
+        n_states,
+        n_actions,
+        n_terminal_states,
+        recurrent_prob,
+        terminal_prob,
+        n_dest_per_state=None,
+        n_dest_per_action=None,
+        n_recurrent_dest_per_state=None,
+        n_recurrent_dest_per_action=None,
+        n_terminal_dest_per_state=None,
+        n_terminal_dest_per_action=None,
+        alpha=1.0,
+):
+    if n_dest_per_state is None:
+        n_dest_per_state = n_states
+    if n_dest_per_action is None:
+        n_dest_per_action = n_dest_per_state
+
+    if isinstance(n_dest_per_state, numbers.Real):
+        tmp1 = n_dest_per_state
+        n_dest_per_state = lambda state: tmp1
+    if isinstance(n_recurrent_dest_per_state, numbers.Real):
+        tmp2 = n_recurrent_dest_per_state
+        n_recurrent_dest_per_state = lambda state: tmp2
+    if isinstance(n_terminal_dest_per_state, numbers.Real):
+        tmp3 = n_terminal_dest_per_state
+        n_terminal_dest_per_state = lambda state: tmp3
+    if isinstance(n_dest_per_action, numbers.Real):
+        tmp4 = n_dest_per_action
+        n_dest_per_action = lambda state, action: tmp4
+    if isinstance(n_recurrent_dest_per_action, numbers.Real):
+        tmp5 = n_recurrent_dest_per_action
+        n_recurrent_dest_per_action = lambda state, action: tmp5
+    if isinstance(n_terminal_dest_per_action, numbers.Real):
+        tmp6 = n_terminal_dest_per_action
+        n_terminal_dest_per_action = lambda state, action: tmp6
+
+    if isinstance(recurrent_prob, numbers.Real):
+        tmp7 = recurrent_prob
+        recurrent_prob = lambda state, action: tmp7
+    if isinstance(terminal_prob, numbers.Real):
+        tmp8 = terminal_prob
+        terminal_prob = lambda state, action: tmp8
+
+    # TODO: add more of these if statements, for n_recurrent_dest_per_state etc.
+
+    if isinstance(alpha, numbers.Real):
+        alpha_per_state = np.array([alpha] * n_states)
+    else:
+        alpha_per_state = alpha
+
+    terminal_states = set(range(n_states - n_terminal_states, n_states))
+
+    transition_matrices = [np.zeros((n_states, n_states)) for _ in range(n_actions)]
+    for s in range(n_states - n_terminal_states):
+        n_state_dests = n_dest_per_state(s)
+        # TODO: double check that this math is reasonable
+        print(n_recurrent_dest_per_state(0))
+        n_state_recurrent_dests = n_recurrent_dest_per_state(s)
+        print(n_state_recurrent_dests)
+        n_state_terminal_dests = n_terminal_dest_per_state(s)
+        print(n_state_terminal_dests)
+        n_state_remaining_dests = n_state_dests - n_state_recurrent_dests - n_state_terminal_dests
+
+        print(n_state_recurrent_dests)
+        print(n_state_terminal_dests)
+        print(n_state_remaining_dests)
+
+        assert n_state_recurrent_dests >= 0; assert n_state_terminal_dests >= 0; assert n_state_remaining_dests >= 0
+
+        recurrent_dests = np.random.choice(s, size=n_state_recurrent_dests, replace=False)
+        terminal_dests = np.random.choice(terminal_states, size=n_state_terminal_dests, replace=False)
+        remaining_dests = np.random.choice(range(s, n_states - n_terminal_states), size=n_state_remaining_dests, replace=False)
+
+        for a in range(n_actions):
+            action_recurrent_prob = recurrent_prob(s, a)
+            action_terminal_prob = terminal_prob(s, a)
+            action_remaining_prob = 1 - action_recurrent_prob - action_terminal_prob
+            if s == n_states - n_terminal_states - 1:  # there are no remaining "remaining" states
+                action_recurrent_prob /= action_recurrent_prob + action_terminal_prob
+                action_terminal_prob /= action_recurrent_prob + action_terminal_prob
+                action_remaining_prob = 0
+            assert action_recurrent_prob >= 0
+            assert action_terminal_prob >= 0
+            assert action_remaining_prob >= 0
+
+            n_action_dests = n_dest_per_action(s, a)
+            n_action_recurrent_dests = n_recurrent_dest_per_action(s, a)
+            n_action_terminal_dests = n_terminal_dest_per_action(s, a)
+            n_action_remaining_dests = n_action_dests - n_recurrent_dest_per_action(s) - n_terminal_dest_per_action(s)
+
+            action_recurrent_dests = np.random.choice(recurrent_dests, size=n_action_recurrent_dests, replace=False)
+            action_terminal_dests = np.random.choice(terminal_dests, size=n_action_terminal_dests, replace=False)
+            action_remaining_dests = np.random.choice(remaining_dests, size=n_action_remaining_dests, replace=False)
+
+            recurrent_alph_array = np.array([alpha_per_state[s]] * n_action_recurrent_dests)
+            recurrent_dest_probs = np.random.dirichlet(recurrent_alph_array, 1)[0]
+
+            terminal_alph_array = np.array([alpha_per_state[s]] * n_action_terminal_dests)
+            terminal_dest_probs = np.random.dirichlet(terminal_alph_array, 1)[0]
+
+            remaining_alph_array = np.array([alpha_per_state[s]] * n_action_remaining_dests)
+            remaining_dest_probs = np.random.dirichlet(remaining_alph_array, 1)[0]
+
+            all_probs = np.zeros(n_states)
+            for i in range(n_action_recurrent_dests):
+                all_probs[action_recurrent_dests[i]] = recurrent_dest_probs[i] * action_recurrent_prob
+            for i in range(n_action_terminal_dests):
+                all_probs[action_terminal_dests[i]] = terminal_dest_probs[i] * action_terminal_prob
+            for i in range(n_action_remaining_dests):
+                all_probs[action_remaining_dests[i]] = remaining_dest_probs[i] * action_remaining_prob
+            transition_matrices[a][s] = all_probs
+
+    return transition_matrices
+
 import networkx as nx
 from networkx.drawing.nx_agraph import write_dot
 
