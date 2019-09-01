@@ -64,7 +64,7 @@ class QLearningAgent(BaseAgent):
         self.eligibility_traces[self.last_state][self.last_action] += 1
         return action
 
-    def step_no_learn(self, reward, state, time):
+    def step_eval(self, reward, state, time):
         return np.argmax(self.q_vals[state])
 
 

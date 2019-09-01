@@ -14,14 +14,14 @@ class TerminalSimulator:
             current_time = 0
             current_state = initial_state
             if no_learning:
-                action = self.agent.step_no_learn(None, current_state, 0)
+                action = self.agent.step_eval(None, current_state, 0)
             else:
                 action = self.agent.begin_episode(initial_state, mdp.n_states, mdp.n_actions)
             while current_state not in mdp.terminal_states:
                 current_time += 1
                 reward, current_state = mdp.step(current_state, action, current_time)
                 if no_learning:
-                    action = self.agent.step_no_learn(reward, current_state, current_time)
+                    action = self.agent.step_eval(reward, current_state, current_time)
                 else:
                     action = self.agent.step(reward, current_state, current_time)
                 episode_rewards[i] += reward

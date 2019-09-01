@@ -16,5 +16,5 @@ class BaseAgent:
     def step(self, reward, state, time):
         return 0
 
-    def step_no_learn(self, reward, state, time):
+    def step_eval(self, reward, state, time):
         pass
